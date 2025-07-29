@@ -106,8 +106,16 @@ def main():
                 if "error" in results:
                     st.error(f"❌ Error: {results['error']}")
                 else:
+                    # Show duplication warning if needed
+                    if "duplication_status" in results:
+                        if results["duplication_status"] == "HIGH_RISK":
+                            st.error("🚨 **HIGH RISK**: Similar content already exists on this blog!")
+                        elif results["duplication_status"] == "WARNING":
+                            st.warning("⚠️ **WARNING**: Some similar content found on this blog.")
+                        else:
+                            st.success("✅ **CLEAR**: No duplicate content detected.")
                     # Tabs for different outputs
-                    tab1, tab2, tab3, tab4, tab5 = st.tabs(["📄 Final Post", "🔗 With Links", "✍️ Draft", "🎨 Style Guide", "🔍 Research"])
+                    tab1, tab2, tab3 = st.tabs(["📄 Final Post", "🎨 Style Guide", "🔍 Research & Analysis"])
                     
                     with tab1:
                         st.markdown("### Final Blog Post")
@@ -122,27 +130,6 @@ def main():
                         )
                     
                     with tab2:
-                        st.markdown("### Post with Internal Links")
-                        st.markdown("*Before final editing - shows added internal links*")
-                        if "with_links" in results:
-                            st.markdown(results["with_links"])
-                        else:
-                            st.info("Internal linking data not available")
-                    
-                    with tab3:
-                        st.markdown("### Original Draft")
-                        st.markdown("*Before internal linking and editing*")
-                        if "draft" in results:
-                            st.text_area(
-                                "Draft Content",
-                                value=results["draft"],
-                                height=300,
-                                disabled=True
-                            )
-                        else:
-                            st.info("Draft not available")
-                    
-                    with tab4:
                         st.markdown("### Extracted Style Guide")
                         st.markdown(f"*Style analysis from: {reference_blog}*")
                         st.text_area(
@@ -152,13 +139,31 @@ def main():
                             disabled=True
                         )
                     
-                    with tab5:
-                        st.markdown("### Research Data")
+                    with tab3:
+                        st.markdown("### Research & Analysis")
+                        
+                        # Duplication check section
+                        st.subheader("Content Duplication Check")
+                        if "duplication_check" in results:
+                            with st.expander("View Duplication Analysis", expanded=False):
+                                st.text_area(
+                                    "Duplication Analysis Results",
+                                    value=results["duplication_check"],
+                                    height=200,
+                                    disabled=True,
+                                    key="duplication_area"
+                                )
+                        else:
+                            st.info("Duplication check data not available")
+                        
+                        # Research section
+                        st.subheader("Topic Research")
                         st.text_area(
                             "Research Results",
                             value=results["research"],
                             height=300,
-                            disabled=True
+                            disabled=True,
+                            key="research_area"
                         )
                         
             except Exception as e:

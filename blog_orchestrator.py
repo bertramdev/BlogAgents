@@ -34,6 +34,35 @@ class BlogAgentOrchestrator:
                 """,
                 tools=[WebSearchTool()]
             ),
+            "content_checker": Agent(
+                name="Content Duplication Checker",
+                instructions="""You are a content duplication specialist that checks for existing content on blogs.
+                
+                Your tasks:
+                1. Search the specified blog/website for existing content on the given topic
+                2. Identify any articles that cover similar or identical subjects
+                3. Assess the level of duplication risk and content overlap
+                4. Provide recommendations for differentiation if duplicates are found
+                
+                Analysis criteria:
+                - Look for articles with similar titles, topics, or keywords
+                - Check for content that covers the same main points
+                - Identify seasonal or recurring content patterns
+                - Consider different angles or approaches to the same topic
+                
+                Return analysis in this format:
+                DUPLICATION STATUS: [CLEAR/WARNING/HIGH_RISK]
+                EXISTING CONTENT FOUND: [Number] similar articles
+                SIMILAR ARTICLES:
+                - [Title] - [URL] - [Similarity level: Low/Medium/High]
+                
+                RECOMMENDATIONS:
+                - [Specific suggestions for differentiation]
+                - [Unique angles to explore]
+                - [How to add value beyond existing content]
+                """,
+                tools=[WebSearchTool()]
+            ),
             "researcher": Agent(
                 name="Research Specialist",
                 instructions="""You are a research specialist for blog content.
@@ -143,15 +172,53 @@ class BlogAgentOrchestrator:
             style_guide = self.analyze_blog_style(reference_blog, status_callback)
             results["style_guide"] = style_guide
             
-            # Step 2: Research topic
+            # Step 2: Check for content duplication
             if status_callback:
-                status_callback("🔍 Researching topic...", 35)
+                status_callback("🔍 Checking for duplicate content...", 30)
+            print("🔍 Checking for existing content on this topic...")
+            duplication_prompt = f"""
+            Check for existing content on {reference_blog} about the topic: {topic}
+            
+            Search for articles that cover similar subjects and assess duplication risk.
+            Provide specific recommendations for differentiation if duplicates are found.
+            
+            Topic to check: {topic}
+            Website to search: {reference_blog}
+            """
+            
+            duplication_result = self._run_agent_safely(self.agents["content_checker"], duplication_prompt)
+            results["duplication_check"] = duplication_result.final_output
+            
+            # Parse duplication status for warnings
+            duplication_status = "CLEAR"
+            if "HIGH_RISK" in duplication_result.final_output:
+                duplication_status = "HIGH_RISK"
+            elif "WARNING" in duplication_result.final_output:
+                duplication_status = "WARNING"
+            results["duplication_status"] = duplication_status
+            
+            # Step 3: Research topic
+            if status_callback:
+                status_callback("🔍 Researching topic...", 45)
             print("🔍 Researching topic...")
-            research_prompt = f"Research the topic: {topic}\n\nRequirements: {requirements}"
+            research_prompt = f"""
+            Research the topic: {topic}
+            
+            Requirements: {requirements}
+            
+            DUPLICATION ANALYSIS:
+            {duplication_result.final_output}
+            
+            Based on the duplication analysis above, focus your research on:
+            - New angles or perspectives not covered in existing content
+            - Recent developments or trends in this area
+            - Unique insights that add value beyond what already exists
+            - Facts, statistics, and examples that differentiate this post
+            """
             research_result = self._run_agent_safely(self.agents["researcher"], research_prompt)
             results["research"] = research_result.final_output
             
-            # Step 3: Write in matching style
+            # Step 4: Write in matching style
             if status_callback:
                 status_callback("✍️ Writing blog post...", 60)
             print("✍️ Writing in matched style...")
@@ -166,6 +233,9 @@ class BlogAgentOrchestrator:
             
             REQUIREMENTS: {requirements}
             
+            DUPLICATION STATUS: {duplication_status}
+            Note: Based on the duplication analysis, ensure your content offers unique value and differentiation.
+            
             Write the post to closely match the style and voice of {reference_blog}.
             Use the specific patterns, tone, and techniques identified in the style guide.
             """
@@ -173,9 +243,9 @@ class BlogAgentOrchestrator:
             writing_result = self._run_agent_safely(self.agents["writer"], writing_prompt)
             results["draft"] = writing_result.final_output
             
-            # Step 4: Add internal links
+            # Step 5: Add internal links
             if status_callback:
-                status_callback("🔗 Adding internal links...", 70)
+                status_callback("🔗 Adding internal links...", 75)
             print("🔗 Adding internal links...")
             linking_prompt = f"""
             Add strategic internal links to this blog post:
@@ -198,9 +268,9 @@ class BlogAgentOrchestrator:
             linking_result = self._run_agent_safely(self.agents["internal_linker"], linking_prompt)
             results["with_links"] = linking_result.final_output
             
-            # Step 5: Edit while preserving style and links
+            # Step 6: Edit while preserving style and links
             if status_callback:
-                status_callback("📝 Final editing and polishing...", 85)
+                status_callback("📝 Final editing and polishing...", 90)
             print("📝 Final editing while preserving style and links...")
             editing_prompt = f"""
             Edit this blog post while preserving the {reference_blog} style and internal links:
