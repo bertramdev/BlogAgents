@@ -8,11 +8,15 @@ from agents import Agent, Runner, WebSearchTool
 load_dotenv()
 
 class BlogAgentOrchestrator:
-    def __init__(self):
+    def __init__(self, model="gpt-4o"):
+        # Store the model for all agents
+        self.model = model
+        
         # Specialist agents
         self.agents = {
             "style_analyzer": Agent(
                 name="Blog Style Analyzer",
+                model=self.model,
                 instructions="""You are a writing style analyzer that can analyze any blog or publication.
                 
                 Your tasks:
@@ -36,6 +40,7 @@ class BlogAgentOrchestrator:
             ),
             "content_checker": Agent(
                 name="Content Duplication Checker",
+                model=self.model,
                 instructions="""You are a content duplication specialist that checks for existing content on blogs.
                 
                 Your tasks:
@@ -65,6 +70,7 @@ class BlogAgentOrchestrator:
             ),
             "researcher": Agent(
                 name="Research Specialist",
+                model=self.model,
                 instructions="""You are a research specialist for blog content.
                 - Research the given topic thoroughly
                 - Find relevant facts, statistics, and examples
@@ -75,7 +81,8 @@ class BlogAgentOrchestrator:
                 tools=[WebSearchTool()]
             ),
             "writer": Agent(
-                name="Content Writer", 
+                name="Content Writer",
+                model=self.model, 
                 instructions="""You are a skilled blog writer.
                 - Create engaging, well-structured blog posts
                 - Use provided research effectively
@@ -86,6 +93,7 @@ class BlogAgentOrchestrator:
             ),
             "internal_linker": Agent(
                 name="Internal Linking Specialist",
+                model=self.model,
                 instructions="""You are an internal linking specialist for blog content.
                 
                 Your tasks:
@@ -110,6 +118,7 @@ class BlogAgentOrchestrator:
             ),
             "editor": Agent(
                 name="Content Editor",
+                model=self.model,
                 instructions="""You are a content editor.
                 - Review content for clarity and flow
                 - Fix grammar and style issues
@@ -122,6 +131,7 @@ class BlogAgentOrchestrator:
             ),
             "seo_analyzer": Agent(
                 name="SEO Content Analyzer",
+                model=self.model,
                 instructions="""You are an SEO analysis specialist that evaluates blog content.
                 
                 Your tasks:

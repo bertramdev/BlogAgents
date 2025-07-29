@@ -90,6 +90,23 @@ def main():
             help="Your OpenAI API key for the Agents SDK"
         )
         
+        # Model selection
+        model = st.selectbox(
+            "OpenAI Model",
+            options=[
+                "gpt-4o",            # Default (recommended)
+                "chatgpt-4o-latest", # Latest updates and improvements
+                "gpt-4o-mini",       # Cost-effective multimodal
+                "gpt-4.1",           # Latest flagship coding-optimized
+                "gpt-4.1-mini",      # Cost-effective GPT-4.1
+                "o4-mini",           # Best reasoning for most situations
+                "o3",                # Most powerful reasoning
+                "o3-mini"            # Cost-effective reasoning
+            ],
+            index=0,
+            help="Select which OpenAI model to use for all agents. gpt-4o is recommended for blog generation."
+        )
+        
         # Reference blog input
         reference_blog = st.text_input(
             "Reference Blog/RSS Feed",
@@ -171,8 +188,8 @@ def main():
             try:
                 # Use secure context manager for API key
                 with temporary_env_var("OPENAI_API_KEY", api_key):
-                    # Initialize orchestrator
-                    orchestrator = BlogAgentOrchestrator()
+                    # Initialize orchestrator with selected model
+                    orchestrator = BlogAgentOrchestrator(model=model)
                     
                     # Progress tracking
                     progress_bar = st.progress(0)
