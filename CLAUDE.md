@@ -20,9 +20,25 @@ cp .env.example .env
 
 ## Running the Application
 
+### Web App (Streamlit)
 ```bash
-# Run the main blog orchestrator
-python blog_orchestrator?.py
+# Run the web interface
+streamlit run app.py
+
+# Opens browser at http://localhost:8501
+# Features:
+# - User-friendly interface for API key input
+# - Reference blog/RSS feed selection
+# - Topic and requirements input
+# - Real-time progress tracking
+# - Tabbed output (Final Post, Style Guide, Research)
+# - Download functionality
+```
+
+### Command Line
+```bash
+# Run the main blog orchestrator directly
+python blog_orchestrator.py
 
 # The application will:
 # 1. Analyze style from reference blog

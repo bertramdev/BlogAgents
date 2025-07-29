@@ -1,5 +1,6 @@
 openai-agents
 python-dotenv
+streamlit
 requests
 feedparser
 beautifulsoup4

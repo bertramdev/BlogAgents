@@ -1,4 +1,6 @@
 #!/usr/bin/env python3
+import asyncio
+import threading
 from typing import Dict, List
 from dotenv import load_dotenv
 from agents import Agent, Runner, WebSearchTool
@@ -66,23 +68,67 @@ class BlogAgentOrchestrator:
             )
         }
     
-    def create_blog_post(self, topic: str, reference_blog: str = "TechCrunch.com", requirements: str = "") -> Dict[str, str]:
+    def _run_agent_safely(self, agent, prompt):
+        """Run agent with proper event loop handling for Streamlit compatibility."""
+        try:
+            # Check if we're in a thread without an event loop
+            try:
+                loop = asyncio.get_event_loop()
+            except RuntimeError:
+                # No event loop in current thread, create one
+                loop = asyncio.new_event_loop()
+                asyncio.set_event_loop(loop)
+            
+            return Runner.run_sync(agent, prompt)
+            
+        except Exception as e:
+            # If still failing, try running in a new thread with its own event loop
+            if "event loop" in str(e).lower():
+                result = {"error": None, "output": None}
+                
+                def run_in_thread():
+                    try:
+                        loop = asyncio.new_event_loop()
+                        asyncio.set_event_loop(loop)
+                        result["output"] = Runner.run_sync(agent, prompt)
+                    except Exception as thread_e:
+                        result["error"] = thread_e
+                    finally:
+                        loop.close()
+                
+                thread = threading.Thread(target=run_in_thread)
+                thread.start()
+                thread.join()
+                
+                if result["error"]:
+                    raise result["error"]
+                return result["output"]
+            else:
+                raise e
+
+    def create_blog_post(self, topic: str, reference_blog: str = "TechCrunch.com", requirements: str = "", status_callback=None) -> Dict[str, str]:
         """Create a blog post that matches the style of a reference publication."""
         results = {}
         
         try:
             # Step 1: Analyze reference style
+            if status_callback:
+                status_callback("🎨 Analyzing blog style...", 10)
             print(f"🎨 Analyzing {reference_blog} style...")
-            style_guide = self.analyze_blog_style(reference_blog)
+            style_guide = self.analyze_blog_style(reference_blog, status_callback)
             results["style_guide"] = style_guide
             
             # Step 2: Research topic
+            if status_callback:
+                status_callback("🔍 Researching topic...", 35)
             print("🔍 Researching topic...")
             research_prompt = f"Research the topic: {topic}\n\nRequirements: {requirements}"
-            research_result = Runner.run_sync(self.agents["researcher"], research_prompt)
+            research_result = self._run_agent_safely(self.agents["researcher"], research_prompt)
             results["research"] = research_result.final_output
             
             # Step 3: Write in matching style
+            if status_callback:
+                status_callback("✍️ Writing blog post...", 60)
             print("✍️ Writing in matched style...")
             writing_prompt = f"""
             Write a blog post about: {topic}
@@ -99,10 +145,12 @@ class BlogAgentOrchestrator:
             Use the specific patterns, tone, and techniques identified in the style guide.
             """
             
-            writing_result = Runner.run_sync(self.agents["writer"], writing_prompt)
+            writing_result = self._run_agent_safely(self.agents["writer"], writing_prompt)
             results["draft"] = writing_result.final_output
             
             # Step 4: Edit while preserving style
+            if status_callback:
+                status_callback("📝 Editing and polishing...", 85)
             print("📝 Editing while preserving style...")
             editing_prompt = f"""
             Edit this blog post while preserving the {reference_blog} style:
@@ -116,13 +164,18 @@ class BlogAgentOrchestrator:
             Improve grammar, flow, and clarity while maintaining the distinctive voice and style patterns.
             """
             
-            editing_result = Runner.run_sync(self.agents["editor"], editing_prompt)
+            editing_result = self._run_agent_safely(self.agents["editor"], editing_prompt)
             results["final"] = editing_result.final_output
+            
+            if status_callback:
+                status_callback("✅ Blog post completed!", 100)
             
             return results
             
         except Exception as e:
             print(f"❌ Error creating blog post: {e}")
+            if status_callback:
+                status_callback(f"❌ Error: {str(e)}", 0)
             results["error"] = str(e)
             return results
     
@@ -144,8 +197,10 @@ class BlogAgentOrchestrator:
         print("✅ Parallel research completed")
         return results
     
-    def analyze_blog_style(self, blog_source: str = "TechCrunch.com") -> str:
+    def analyze_blog_style(self, blog_source: str = "TechCrunch.com", status_callback=None) -> str:
         """Analyze the writing style of a specified blog or publication."""
+        if status_callback:
+            status_callback(f"🎨 Fetching articles from {blog_source}...", 15)
         print(f"🎨 Analyzing writing style of {blog_source}...")
         
         style_prompt = f"""
@@ -161,7 +216,9 @@ class BlogAgentOrchestrator:
         """
         
         try:
-            result = Runner.run_sync(self.agents["style_analyzer"], style_prompt)
+            if status_callback:
+                status_callback("🔍 Analyzing writing patterns...", 25)
+            result = self._run_agent_safely(self.agents["style_analyzer"], style_prompt)
             print("✅ Style analysis completed")
             return result.final_output
         except Exception as e:
@@ -176,11 +233,13 @@ def main():
     orchestrator = BlogAgentOrchestrator()
     
     # Example: Create a style-matched blog post
-    topic = "Electric bikes in the US"
-    blog_source = "https://lectricebikes.com/"  # Can be changed to any blog
+    topic = "The Future of Remote Work"
+    blog_source = "YourBlog.com"  # Can be changed to any blog
     requirements = """
-    - Target audience: Potential electric bike customers
-    - Include a call-to-action for a newsletter signup
+    - Target audience: Business professionals
+    - Include practical examples
+    - Keep under 1500 words
+    - Add call-to-action for newsletter signup
     """
     
     print(f"🚀 Creating blog post about: {topic}")
