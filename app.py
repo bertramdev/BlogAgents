@@ -107,7 +107,7 @@ def main():
                     st.error(f"❌ Error: {results['error']}")
                 else:
                     # Tabs for different outputs
-                    tab1, tab2, tab3 = st.tabs(["📄 Final Post", "🎨 Style Guide", "🔍 Research"])
+                    tab1, tab2, tab3, tab4, tab5 = st.tabs(["📄 Final Post", "🔗 With Links", "✍️ Draft", "🎨 Style Guide", "🔍 Research"])
                     
                     with tab1:
                         st.markdown("### Final Blog Post")
@@ -122,6 +122,27 @@ def main():
                         )
                     
                     with tab2:
+                        st.markdown("### Post with Internal Links")
+                        st.markdown("*Before final editing - shows added internal links*")
+                        if "with_links" in results:
+                            st.markdown(results["with_links"])
+                        else:
+                            st.info("Internal linking data not available")
+                    
+                    with tab3:
+                        st.markdown("### Original Draft")
+                        st.markdown("*Before internal linking and editing*")
+                        if "draft" in results:
+                            st.text_area(
+                                "Draft Content",
+                                value=results["draft"],
+                                height=300,
+                                disabled=True
+                            )
+                        else:
+                            st.info("Draft not available")
+                    
+                    with tab4:
                         st.markdown("### Extracted Style Guide")
                         st.markdown(f"*Style analysis from: {reference_blog}*")
                         st.text_area(
@@ -131,7 +152,7 @@ def main():
                             disabled=True
                         )
                     
-                    with tab3:
+                    with tab5:
                         st.markdown("### Research Data")
                         st.text_area(
                             "Research Results",

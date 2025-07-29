@@ -55,6 +55,30 @@ class BlogAgentOrchestrator:
                 - Maintain conversational but professional tone
                 """
             ),
+            "internal_linker": Agent(
+                name="Internal Linking Specialist",
+                instructions="""You are an internal linking specialist for blog content.
+                
+                Your tasks:
+                1. Analyze the blog post content for internal linking opportunities
+                2. Identify keywords and phrases that could link to other relevant content
+                3. Search for related articles on the same website/domain
+                4. Add strategic internal links using natural anchor text
+                5. Ensure links enhance user experience and SEO
+                
+                Guidelines:
+                - Use natural, contextual anchor text (avoid "click here")
+                - Link to genuinely relevant and helpful content
+                - Don't over-link (2-5 internal links per 1000 words is optimal)
+                - Prioritize links that add value to the reader
+                - Use varied anchor text for similar topics
+                - Link to both newer and evergreen content when appropriate
+                - Prioritize collections pages and blog posts over pdps
+                
+                Return the content with internal links added in markdown format [anchor text](URL).
+                """,
+                tools=[WebSearchTool()]
+            ),
             "editor": Agent(
                 name="Content Editor",
                 instructions="""You are a content editor.
@@ -64,6 +88,7 @@ class BlogAgentOrchestrator:
                 - Improve readability and engagement
                 - Suggest structural improvements
                 - Consider SEO and AI visibility
+                - Preserve any internal links that have been added
                 """
             )
         }
@@ -148,20 +173,49 @@ class BlogAgentOrchestrator:
             writing_result = self._run_agent_safely(self.agents["writer"], writing_prompt)
             results["draft"] = writing_result.final_output
             
-            # Step 4: Edit while preserving style
+            # Step 4: Add internal links
             if status_callback:
-                status_callback("📝 Editing and polishing...", 85)
-            print("📝 Editing while preserving style...")
+                status_callback("🔗 Adding internal links...", 70)
+            print("🔗 Adding internal links...")
+            linking_prompt = f"""
+            Add strategic internal links to this blog post:
+            
+            BLOG POST CONTENT:
+            {writing_result.final_output}
+            
+            WEBSITE/DOMAIN: {reference_blog}
+            
+            Instructions:
+            1. Search for existing content on {reference_blog} that relates to topics in this post
+            2. Add 2-5 relevant internal links using natural anchor text
+            3. Focus on links that genuinely help the reader learn more
+            4. Use markdown format: [anchor text](URL)
+            5. Don't over-link or force unnatural links
+            
+            Return the blog post with internal links added.
+            """
+            
+            linking_result = self._run_agent_safely(self.agents["internal_linker"], linking_prompt)
+            results["with_links"] = linking_result.final_output
+            
+            # Step 5: Edit while preserving style and links
+            if status_callback:
+                status_callback("📝 Final editing and polishing...", 85)
+            print("📝 Final editing while preserving style and links...")
             editing_prompt = f"""
-            Edit this blog post while preserving the {reference_blog} style:
+            Edit this blog post while preserving the {reference_blog} style and internal links:
             
             ORIGINAL STYLE GUIDE:
             {style_guide}
             
             DRAFT TO EDIT:
-            {writing_result.final_output}
+            {linking_result.final_output}
             
-            Improve grammar, flow, and clarity while maintaining the distinctive voice and style patterns.
+            Instructions:
+            - Improve grammar, flow, and clarity while maintaining the distinctive voice and style patterns
+            - PRESERVE all internal links that have been added
+            - Ensure the content flows naturally around the linked text
+            - Don't remove or modify any [anchor text](URL) formatting
             """
             
             editing_result = self._run_agent_safely(self.agents["editor"], editing_prompt)
