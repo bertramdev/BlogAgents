@@ -1,7 +1,6 @@
 #!/usr/bin/env python3
 import streamlit as st
 import os
-import tempfile
 import re
 import contextlib
 from urllib.parse import urlparse
@@ -75,8 +74,22 @@ def main():
         layout="wide"
     )
     
-    st.title("✍️ Blog Agents")
-    st.markdown("**AI-powered blog content generation with style matching**")
+    # Header with logo (using file path for deployment)  
+    _, col_center, _ = st.columns([1, 2, 1])
+    with col_center:
+        try:
+            # Use relative path that works locally and when deployed
+            logo_path = os.path.join(os.path.dirname(__file__), "assets", "bertram_labs_logo.svg")
+            with open(logo_path, 'r') as f:
+                logo_svg = f.read()
+            # Add styling to the SVG
+            styled_logo = logo_svg.replace('<svg', '<svg style="max-width: 200px; height: auto;"')
+            st.markdown(f'<div style="text-align: center; padding: 1rem 0;">{styled_logo}</div>', unsafe_allow_html=True)
+        except:
+            # Fallback: show text logo if file not found
+            st.markdown('<div style="text-align: center; padding: 1rem 0;"><h2 style="color: #2D5DA8; margin: 0; font-family: Inter, sans-serif;">BERTRAM LABS</h2></div>', unsafe_allow_html=True)
+        st.markdown('<h1 style="text-align: center; margin-top: 1rem;">✍️ Blog Agents</h1>', unsafe_allow_html=True)
+        st.markdown('<p style="text-align: center; font-size: 1.1rem; margin-bottom: 2rem;"><strong>AI-powered blog content generation with style matching</strong></p>', unsafe_allow_html=True)
     
     # Sidebar for configuration
     with st.sidebar:
@@ -326,8 +339,9 @@ def main():
     st.markdown("---")
     st.markdown(
         """
-        <div style='text-align: center; color: gray;'>
-        <p>Powered by OpenAI Agents SDK | Built with Streamlit</p>
+        <div style='text-align: center; color: gray; padding: 2rem 0;'>
+        <p>Powered by OpenAI Agents SDK | Built by <a href="https://www.bertramlabs.com" target="_blank" style="color: #2D5DA8; text-decoration: none; font-weight: bold;">Bertram Labs</a></p>
+        <p style='font-size: 0.9rem; margin-top: 0.5rem;'>Professional AI Solutions & Custom Development</p>
         </div>
         """,
         unsafe_allow_html=True

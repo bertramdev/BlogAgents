@@ -1,0 +1,15 @@
+[theme]
+# Bertram Labs brand colors
+primaryColor = "#2D5DA8"           # Bertram Labs blue for buttons and accents
+backgroundColor = "#FFFFFF"        # Clean white background
+secondaryBackgroundColor = "#F8F9FA"  # Light gray for sidebar and containers
+textColor = "#1F1A4F"             # Bertram Labs dark navy for text
+font = "sans serif"               # Clean, professional font
+
+[server]
+# Optional: disable file watcher for better performance
+fileWatcherType = "none"
+
+[browser]
+# Optional: automatically open browser
+gatherUsageStats = false
