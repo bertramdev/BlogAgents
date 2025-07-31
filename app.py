@@ -68,6 +68,7 @@ MAX_REQUIREMENTS_LENGTH = 2000
 MAX_API_KEY_LENGTH = 200
 
 def main():
+    """Streamlit web app entry point - renders the blog generation interface."""
     st.set_page_config(
         page_title="Blog Agents - AI Content Generator",
         page_icon="✍️",

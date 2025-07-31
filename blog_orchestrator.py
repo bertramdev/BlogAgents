@@ -174,10 +174,10 @@ class BlogAgentOrchestrator:
         }
     
     def _run_agent_safely(self, agent, prompt, timeout_seconds=300):
-        """Run agent with Streamlit thread compatibility and proper resource management."""
+        """Execute agent in isolated thread to prevent Streamlit async conflicts."""
         
         def run_in_thread():
-            """Run the agent in a separate thread with its own event loop."""
+            """Run agent with its own event loop in separate thread."""
             loop = None
             try:
                 # Create new event loop for this thread
@@ -214,7 +214,7 @@ class BlogAgentOrchestrator:
             self._thread_pool.shutdown(wait=True)
 
     def create_blog_post(self, topic: str, reference_blog: str, requirements: str = "", status_callback=None) -> Dict[str, str]:
-        """Create a blog post that matches the style of a reference publication."""
+        """Main workflow: orchestrates all 7 agents to create style-matched blog post."""
         results = {}
         
         try:
@@ -376,7 +376,7 @@ class BlogAgentOrchestrator:
             return results
     
     def parallel_research(self, topic: str, research_areas: List[str]) -> Dict[str, str]:
-        """Conduct parallel research on different aspects of a topic."""
+        """Unused function for parallel research - not integrated in main workflow."""
         from concurrent.futures import ThreadPoolExecutor
         
         def research_area(area: str) -> str:
@@ -394,7 +394,7 @@ class BlogAgentOrchestrator:
         return results
     
     def analyze_blog_style(self, blog_source: str, status_callback=None) -> str:
-        """Analyze the writing style of a specified blog or publication."""
+        """Uses style_analyzer agent to extract writing patterns from reference blog."""
         if status_callback:
             status_callback(f"🎨 Fetching articles from {blog_source}...", 15)
         print(f"🎨 Analyzing writing style of {blog_source}...")
@@ -422,10 +422,11 @@ class BlogAgentOrchestrator:
             return f"Style analysis failed: {e}"
     
     def create_style_matched_post(self, topic: str, reference_blog: str, requirements: str = "") -> Dict[str, str]:
-        """Alias for create_blog_post for backward compatibility."""
+        """Legacy function name - calls create_blog_post internally."""
         return self.create_blog_post(topic, reference_blog, requirements)
 
 def main():
+    """CLI entry point - runs example blog post generation."""
     orchestrator = BlogAgentOrchestrator()
     
     # Example: Create a style-matched blog post
