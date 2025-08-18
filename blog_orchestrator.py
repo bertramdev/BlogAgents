@@ -296,10 +296,41 @@ class BlogAgentOrchestrator:
             writing_result = self._run_agent_safely(self.agents["writer"], writing_prompt)
             results["draft"] = writing_result.final_output
             
-            # Step 5: Add internal links
+            # Step 5: SEO Analysis of draft for optimization recommendations  
             if status_callback:
-                status_callback("🔗 Adding internal links...", 75)
-            print("🔗 Adding internal links...")
+                status_callback("📊 Analyzing draft for SEO optimization...", 65)
+            print("📊 Analyzing draft for SEO recommendations...")
+            initial_seo_prompt = f"""
+            Analyze this blog post draft for SEO optimization opportunities:
+            
+            BLOG POST DRAFT:
+            {writing_result.final_output}
+            
+            TARGET TOPIC: {topic}
+            PUBLICATION STYLE: {reference_blog}
+            
+            Provide specific, actionable SEO recommendations for:
+            1. Heading structure and keyword optimization
+            2. Content improvements for better search visibility
+            3. Strategic internal linking opportunities 
+            4. Meta description suggestions
+            5. Readability and structure enhancements
+            
+            Focus on recommendations that can be implemented in the editing phase.
+            """
+            
+            try:
+                initial_seo_result = self._run_agent_safely(self.agents["seo_analyzer"], initial_seo_prompt)
+                results["initial_seo_analysis"] = initial_seo_result.final_output
+                print(f"✅ Initial SEO analysis completed: {len(results['initial_seo_analysis'])} characters")
+            except Exception as e:
+                print(f"❌ Initial SEO analysis failed: {e}")
+                results["initial_seo_analysis"] = f"Initial SEO analysis failed: {str(e)}"
+            
+            # Step 6: Add internal links (with SEO insights)
+            if status_callback:
+                status_callback("🔗 Adding strategic internal links...", 75)
+            print("🔗 Adding internal links with SEO optimization...")
             linking_prompt = f"""
             Add strategic internal links to this blog post:
             
@@ -307,6 +338,9 @@ class BlogAgentOrchestrator:
             {writing_result.final_output}
             
             WEBSITE/DOMAIN: {reference_blog}
+            
+            SEO RECOMMENDATIONS TO CONSIDER:
+            {results.get("initial_seo_analysis", "No SEO recommendations available")}
             
             Instructions:
             1. Search for existing content on {reference_blog} that relates to topics in this post
@@ -321,47 +355,60 @@ class BlogAgentOrchestrator:
             linking_result = self._run_agent_safely(self.agents["internal_linker"], linking_prompt)
             results["with_links"] = linking_result.final_output
             
-            # Step 6: Edit while preserving style and links
+            # Step 7: Edit with SEO optimization while preserving style and links
             if status_callback:
-                status_callback("📝 Final editing and polishing...", 90)
-            print("📝 Final editing while preserving style and links...")
+                status_callback("📝 Final editing with SEO optimization...", 85)
+            print("📝 Final editing with SEO optimization...")
             editing_prompt = f"""
             Edit this blog post while preserving the {reference_blog} style and internal links:
             
             ORIGINAL STYLE GUIDE:
-            {style_guide}
+            {results["style_guide"]}
             
             DRAFT TO EDIT:
             {linking_result.final_output}
             
+            SEO RECOMMENDATIONS TO IMPLEMENT:
+            {results.get("initial_seo_analysis", "No SEO recommendations available")}
+            
             Instructions:
             - Improve grammar, flow, and clarity while maintaining the distinctive voice and style patterns
             - PRESERVE all internal links that have been added
+            - Implement SEO recommendations where they don't conflict with style preservation
+            - Optimize headings, keywords, and content structure based on SEO analysis
             - Ensure the content flows naturally around the linked text
             - Don't remove or modify any [anchor text](URL) formatting
+            - Balance SEO optimization with authentic brand voice
             """
             
             editing_result = self._run_agent_safely(self.agents["editor"], editing_prompt)
             results["final"] = editing_result.final_output
             
-            # Step 7: SEO Analysis
+            # Step 8: Final SEO Analysis and Performance Assessment
             if status_callback:
-                status_callback("📊 Analyzing SEO performance...", 95)
-            print("📊 Analyzing SEO performance...")
-            seo_prompt = f"""
-            Analyze this final blog post for SEO best practices and provide actionable recommendations:
+                status_callback("📊 Final SEO performance analysis...", 95)
+            print("📊 Final SEO performance assessment...")
+            final_seo_prompt = f"""
+            Perform a final SEO analysis of this completed blog post:
             
-            BLOG POST TO ANALYZE:
+            FINAL BLOG POST:
             {editing_result.final_output}
+            
+            ORIGINAL SEO RECOMMENDATIONS:
+            {results.get("initial_seo_analysis", "No initial SEO recommendations were available")}
             
             TARGET TOPIC: {topic}
             PUBLICATION STYLE: {reference_blog}
             
-            Provide a comprehensive SEO analysis with specific recommendations for improvement.
+            Provide a comprehensive final SEO assessment including:
+            1. How well the original recommendations were implemented
+            2. Current SEO score and performance analysis  
+            3. Any remaining optimization opportunities
+            4. Content quality and search visibility assessment
             """
             
-            seo_result = self._run_agent_safely(self.agents["seo_analyzer"], seo_prompt)
-            results["seo_analysis"] = seo_result.final_output
+            final_seo_result = self._run_agent_safely(self.agents["seo_analyzer"], final_seo_prompt)
+            results["seo_analysis"] = final_seo_result.final_output
             
             if status_callback:
                 status_callback("✅ Blog post completed with SEO analysis!", 100)

@@ -239,7 +239,16 @@ def main():
                         else:
                             st.success("✅ **CLEAR**: No duplicate content detected.")
                     # Tabs for different outputs
-                    tab1, tab2, tab3, tab4 = st.tabs(["📄 Final Post", "🎨 Style Guide", "🔍 Research & Analysis", "📊 SEO Analysis"])
+                    tab1, tab2, tab3, tab4, tab5, tab6, tab7, tab8 = st.tabs([
+                        "📄 Final Post",
+                        "🎨 Style Guide", 
+                        "🚨 Duplication Check",
+                        "🔍 Research & Analysis", 
+                        "✍️ Writer Draft",
+                        "📊 Initial SEO Analysis",
+                        "🔗 With Links",
+                        "📊 Final SEO Analysis"
+                    ])
                     
                     with tab1:
                         st.markdown("### Final Blog Post")
@@ -271,36 +280,93 @@ def main():
                         )
                     
                     with tab3:
-                        st.markdown("### Research & Analysis")
-                        
-                        # Duplication check section
-                        st.subheader("Content Duplication Check")
+                        st.markdown("### Content Duplication Check")
+                        st.markdown("*Analysis of existing content and duplication risk*")
                         if "duplication_check" in results:
-                            with st.expander("View Duplication Analysis", expanded=False):
-                                st.text_area(
-                                    "Duplication Analysis Results",
-                                    value=results["duplication_check"],
-                                    height=250,
-                                    disabled=False,
-                                    key="duplication_area",
-                                    help="You can copy text from this field"
-                                )
+                            st.text_area(
+                                "Duplication Check Results",
+                                value=results["duplication_check"],
+                                height=400,
+                                disabled=False,
+                                key="duplication_area",
+                                help="Content duplication analysis and recommendations"
+                            )
+                            
+                            # Show duplication status badge
+                            if "duplication_status" in results:
+                                status = results["duplication_status"]
+                                if status == "HIGH_RISK":
+                                    st.error(f"🚨 **Status**: {status}")
+                                elif status == "WARNING":
+                                    st.warning(f"⚠️ **Status**: {status}")
+                                else:
+                                    st.success(f"✅ **Status**: {status}")
                         else:
-                            st.info("Duplication check data not available")
-                        
-                        # Research section
-                        st.subheader("Topic Research")
-                        st.text_area(
-                            "Research Results",
-                            value=results["research"],
-                            height=350,
-                            disabled=False,
-                            key="research_area",
-                            help="You can copy text from this field"
-                        )
+                            st.info("Duplication check not available")
                     
                     with tab4:
-                        st.markdown("### SEO Performance Analysis")
+                        st.markdown("### Research & Analysis")
+                        st.markdown("*Comprehensive research on the topic*")
+                        if "research" in results:
+                            st.text_area(
+                                "Research Results",
+                                value=results["research"],
+                                height=400,
+                                disabled=False,
+                                key="research_area",
+                                help="Detailed research findings and insights"
+                            )
+                        else:
+                            st.info("Research results not available")
+                    
+                    with tab5:
+                        st.markdown("### Writer Draft")
+                        st.markdown("*Initial blog post draft before SEO optimization*")
+                        if "draft" in results:
+                            st.text_area(
+                                "Writer Draft",
+                                value=results["draft"],
+                                height=400,
+                                disabled=False,
+                                key="draft_area",
+                                help="Initial blog post draft from the writer agent"
+                            )
+                        else:
+                            st.info("Writer draft not available")
+                    
+                    with tab6:
+                        st.markdown("### Initial SEO Analysis")
+                        st.markdown("*SEO optimization recommendations for the draft*")
+                        if "initial_seo_analysis" in results:
+                            st.text_area(
+                                "SEO Optimization Recommendations",
+                                value=results["initial_seo_analysis"],
+                                height=400,
+                                disabled=False,
+                                key="initial_seo_area",
+                                help="SEO recommendations applied during editing"
+                            )
+                        else:
+                            st.info("Initial SEO analysis not available")
+                    
+                    with tab7:
+                        st.markdown("### Content With Internal Links")
+                        st.markdown("*Blog post with strategic SEO-optimized internal links*")
+                        if "with_links" in results:
+                            st.text_area(
+                                "Content with Internal Links",
+                                value=results["with_links"],
+                                height=400,
+                                disabled=False,
+                                key="links_area",
+                                help="Blog post with SEO-optimized internal links added"
+                            )
+                        else:
+                            st.info("Internal linking results not available")
+                    
+                    with tab8:
+                        st.markdown("### Final SEO Performance Analysis")
+                        st.markdown("*Comprehensive SEO assessment of the completed blog post*")
                         
                         if "seo_analysis" in results:
                             # Parse SEO score if available
