@@ -252,21 +252,80 @@ def main():
                     
                     with tab1:
                         st.markdown("### Final Blog Post")
-                        st.text_area(
-                            "Generated Blog Post",
-                            value=results["final"],
-                            height=500,
-                            disabled=False,
-                            help="You can copy or edit the final blog post"
-                        )
                         
-                        # Download button
-                        st.download_button(
-                            label="📥 Download as Text",
-                            data=results["final"],
-                            file_name=f"blog_post_{topic[:30].replace(' ', '_')}.txt",
-                            mime="text/plain"
-                        )
+                        # Display formatted content
+                        with st.container():
+                            st.markdown("#### Preview")
+                            # Show formatted markdown preview
+                            st.markdown(results["final"])
+                        
+                        # Raw content for editing
+                        with st.expander("📝 Edit Raw Content", expanded=False):
+                            edited_content = st.text_area(
+                                "Edit the blog post content:",
+                                value=results["final"],
+                                height=400,
+                                help="You can edit the content here before downloading",
+                                key="final_edit_area"
+                            )
+                        
+                        # Default to original content for downloads
+                        final_content = edited_content if st.session_state.get("final_edit_area") else results["final"]
+                        
+                        # Download options
+                        st.markdown("#### Download Options")
+                        col1, col2, col3 = st.columns(3)
+                        
+                        with col1:
+                            st.download_button(
+                                label="📄 Download as Text",
+                                data=final_content,
+                                file_name=f"blog_post_{topic[:30].replace(' ', '_').lower()}.txt",
+                                mime="text/plain",
+                                use_container_width=True
+                            )
+                        
+                        with col2:
+                            st.download_button(
+                                label="📝 Download as Markdown", 
+                                data=final_content,
+                                file_name=f"blog_post_{topic[:30].replace(' ', '_').lower()}.md",
+                                mime="text/markdown",
+                                use_container_width=True
+                            )
+                        
+                        with col3:
+                            # Convert markdown to HTML for download
+                            try:
+                                import markdown
+                                html_content = f"""<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>{topic}</title>
+    <style>
+        body {{ font-family: Arial, sans-serif; max-width: 800px; margin: 0 auto; padding: 20px; line-height: 1.6; }}
+        h1, h2, h3 {{ color: #333; }}
+        code {{ background-color: #f4f4f4; padding: 2px 4px; border-radius: 3px; }}
+        pre {{ background-color: #f4f4f4; padding: 10px; border-radius: 5px; overflow-x: auto; }}
+        blockquote {{ border-left: 4px solid #ddd; margin: 0; padding-left: 20px; font-style: italic; }}
+        a {{ color: #0066cc; text-decoration: none; }}
+        a:hover {{ text-decoration: underline; }}
+    </style>
+</head>
+<body>
+{markdown.markdown(final_content)}
+</body>
+</html>"""
+                                st.download_button(
+                                    label="🌐 Download as HTML",
+                                    data=html_content,
+                                    file_name=f"blog_post_{topic[:30].replace(' ', '_').lower()}.html",
+                                    mime="text/html",
+                                    use_container_width=True
+                                )
+                            except ImportError:
+                                st.info("HTML export requires markdown package")
                     
                     with tab2:
                         st.markdown("### Extracted Style Guide")
@@ -323,14 +382,42 @@ def main():
                         st.markdown("### Writer Draft")
                         st.markdown("*Initial blog post draft before SEO optimization*")
                         if "draft" in results:
-                            st.text_area(
-                                "Writer Draft",
-                                value=results["draft"],
-                                height=400,
-                                disabled=False,
-                                key="draft_area",
-                                help="Initial blog post draft from the writer agent"
-                            )
+                            # Display formatted content
+                            with st.container():
+                                st.markdown("#### Preview")
+                                st.markdown(results["draft"])
+                            
+                            # Raw content for editing
+                            with st.expander("📝 Edit Draft Content", expanded=False):
+                                st.text_area(
+                                    "Edit the draft content:",
+                                    value=results["draft"],
+                                    height=400,
+                                    key="draft_edit_area",
+                                    help="You can edit the draft content here before downloading"
+                                )
+                            
+                            # Download options for draft
+                            st.markdown("#### Download Draft")
+                            col1, col2 = st.columns(2)
+                            
+                            with col1:
+                                st.download_button(
+                                    label="📄 Download Draft as Text",
+                                    data=results["draft"],
+                                    file_name=f"draft_{topic[:30].replace(' ', '_').lower()}.txt",
+                                    mime="text/plain",
+                                    use_container_width=True
+                                )
+                            
+                            with col2:
+                                st.download_button(
+                                    label="📝 Download Draft as Markdown",
+                                    data=results["draft"],
+                                    file_name=f"draft_{topic[:30].replace(' ', '_').lower()}.md",
+                                    mime="text/markdown",
+                                    use_container_width=True
+                                )
                         else:
                             st.info("Writer draft not available")
                     
@@ -353,14 +440,42 @@ def main():
                         st.markdown("### Content With Internal Links")
                         st.markdown("*Blog post with strategic SEO-optimized internal links*")
                         if "with_links" in results:
-                            st.text_area(
-                                "Content with Internal Links",
-                                value=results["with_links"],
-                                height=400,
-                                disabled=False,
-                                key="links_area",
-                                help="Blog post with SEO-optimized internal links added"
-                            )
+                            # Display formatted content with links
+                            with st.container():
+                                st.markdown("#### Preview with Links")
+                                st.markdown(results["with_links"])
+                            
+                            # Raw content
+                            with st.expander("📝 View/Edit Raw Content with Links", expanded=False):
+                                st.text_area(
+                                    "Content with Internal Links:",
+                                    value=results["with_links"],
+                                    height=400,
+                                    key="links_edit_area",
+                                    help="Content with SEO-optimized internal links added"
+                                )
+                            
+                            # Download options
+                            st.markdown("#### Download With Links")
+                            col1, col2 = st.columns(2)
+                            
+                            with col1:
+                                st.download_button(
+                                    label="📄 Download as Text",
+                                    data=results["with_links"],
+                                    file_name=f"with_links_{topic[:30].replace(' ', '_').lower()}.txt",
+                                    mime="text/plain",
+                                    use_container_width=True
+                                )
+                            
+                            with col2:
+                                st.download_button(
+                                    label="📝 Download as Markdown",
+                                    data=results["with_links"],
+                                    file_name=f"with_links_{topic[:30].replace(' ', '_').lower()}.md",
+                                    mime="text/markdown",
+                                    use_container_width=True
+                                )
                         else:
                             st.info("Internal linking results not available")
                     
