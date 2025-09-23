@@ -99,15 +99,21 @@ class BlogAgentOrchestrator:
                 name="Internal Linking Specialist",
                 model=self.model,
                 instructions="""You are an internal linking specialist for blog content.
-                
+
                 Your tasks:
                 1. Analyze the blog post content for internal linking opportunities
                 2. Identify keywords and phrases that could link to other relevant content
-                3. Search for related articles on the same website/domain
-                4. Add strategic internal links using natural anchor text
-                5. Ensure links enhance user experience and SEO
-                
-                Guidelines:
+                3. Search for related articles on the same website/domain using WebSearchTool
+                4. ONLY use URLs that you find directly from search results - do not construct or guess URLs
+                5. Verify each link by ensuring it appears in actual search results
+                6. Add strategic internal links using natural anchor text
+
+                CRITICAL Guidelines:
+                - ONLY use URLs that appear in your WebSearchTool search results
+                - DO NOT create, construct, or guess any URLs
+                - Each link must be from an actual page you found via search
+                - Include the full URL exactly as it appears in search results
+                - If you cannot find relevant pages via search, do not add links
                 - Use natural, contextual anchor text (avoid "click here")
                 - Link to genuinely relevant and helpful content
                 - Don't over-link (2-5 internal links per 1000 words is optimal)
@@ -115,8 +121,11 @@ class BlogAgentOrchestrator:
                 - Use varied anchor text for similar topics
                 - Link to both newer and evergreen content when appropriate
                 - Prioritize collections pages and blog posts over pdps
-                
-                Return the content with internal links added in markdown format [anchor text](URL).
+
+                Format: Use markdown [anchor text](EXACT_URL_FROM_SEARCH)
+                If unsure about a link, leave it out rather than guessing.
+
+                Return the content with ONLY verified internal links added.
                 """,
                 tools=[WebSearchTool()]
             ),
@@ -333,23 +342,29 @@ class BlogAgentOrchestrator:
             print("🔗 Adding internal links with SEO optimization...")
             linking_prompt = f"""
             Add strategic internal links to this blog post:
-            
+
             BLOG POST CONTENT:
             {writing_result.final_output}
-            
+
             WEBSITE/DOMAIN: {reference_blog}
-            
+
             SEO RECOMMENDATIONS TO CONSIDER:
             {results.get("initial_seo_analysis", "No SEO recommendations available")}
-            
-            Instructions:
-            1. Search for existing content on {reference_blog} that relates to topics in this post
-            2. Add 2-5 relevant internal links using natural anchor text
-            3. Focus on links that genuinely help the reader learn more
-            4. Use markdown format: [anchor text](URL)
-            5. Don't over-link or force unnatural links
-            
-            Return the blog post with internal links added.
+
+            CRITICAL Instructions:
+            1. Use WebSearchTool to search for existing content on {reference_blog} that relates to topics in this post
+            2. Use search queries like: "site:{reference_blog} [topic]" to find specific pages
+            3. ONLY use URLs that you find in actual search results - never guess or construct URLs
+            4. For each link you want to add:
+               - Search for the specific topic using site:{reference_blog} operator
+               - Copy the EXACT URL from the search result
+               - Use that exact URL in your markdown link
+            5. Add 2-5 relevant internal links using natural anchor text (if found)
+            6. If you cannot find relevant pages via search, it's better to not add a link
+            7. Use markdown format: [anchor text](EXACT_URL_FROM_SEARCH)
+            8. Each link MUST be verified through search - no exceptions
+
+            Return the blog post with ONLY verified internal links added.
             """
             
             linking_result = self._run_agent_safely(self.agents["internal_linker"], linking_prompt)
