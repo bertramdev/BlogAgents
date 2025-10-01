@@ -57,4 +57,5 @@ logs/
 
 # Temporary files
 *.tmp
-*.temp
+*.tempai-projects-*.json
+*.json

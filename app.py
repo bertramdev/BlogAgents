@@ -3,8 +3,10 @@ import streamlit as st
 import os
 import re
 import contextlib
+import json
 from urllib.parse import urlparse
 from blog_orchestrator import BlogAgentOrchestrator
+from sheets_manager import create_sheets_manager
 
 @contextlib.contextmanager
 def temporary_env_var(key, value):
@@ -74,6 +76,9 @@ def main():
         page_icon="✍️",
         layout="wide"
     )
+
+    # Initialize sheets_manager at function level
+    sheets_manager = None
     
     # Header with logo (using file path for deployment)  
     _, col_center, _ = st.columns([1, 2, 1])
@@ -95,7 +100,7 @@ def main():
     # Sidebar for configuration
     with st.sidebar:
         st.header("⚙️ Configuration")
-        
+
         # API Key input
         api_key = st.text_input(
             "OpenAI API Key",
@@ -103,6 +108,63 @@ def main():
             max_chars=MAX_API_KEY_LENGTH,
             help="Your OpenAI API key for the Agents SDK"
         )
+
+        # Google Sheets Configuration
+        st.subheader("📊 Google Sheets Integration")
+        use_sheets = st.checkbox(
+            "Enable Google Sheets storage",
+            value=False,
+            help="Store style guides and content in Google Sheets for persistence"
+        )
+
+        if use_sheets:
+            # Service Account JSON input
+            service_account_json = st.text_area(
+                "Service Account JSON",
+                height=150,
+                help="Paste your Google Service Account JSON credentials",
+                placeholder='{\n  "type": "service_account",\n  "project_id": "...",\n  ...\n}'
+            )
+
+            # Spreadsheet ID input
+            spreadsheet_id = st.text_input(
+                "Spreadsheet ID",
+                help="Google Sheets ID from the URL",
+                placeholder="1BxiMVs0XRA5nFMdKvBdBZjgmUUqptlbs74OgvE2upms"
+            )
+
+            # Test connection button
+            if service_account_json and spreadsheet_id:
+                if st.button("🔗 Test Sheets Connection"):
+                    try:
+                        sheets_manager = create_sheets_manager(service_account_json, spreadsheet_id)
+                        if sheets_manager:
+                            st.success("✅ Connected to Google Sheets!")
+                            st.session_state.sheets_manager = sheets_manager
+                        else:
+                            st.error("❌ Failed to connect to Google Sheets")
+                    except Exception as e:
+                        st.error(f"❌ Connection failed: {str(e)}")
+
+                # Use existing connection if available
+                if 'sheets_manager' in st.session_state:
+                    sheets_manager = st.session_state.sheets_manager
+                    # Verify connection is still valid
+                    try:
+                        if sheets_manager.test_connection():
+                            st.info("📊 Using cached Sheets connection")
+                        else:
+                            st.warning("⚠️ Cached connection invalid, please reconnect")
+                            del st.session_state.sheets_manager
+                            sheets_manager = None
+                    except Exception as e:
+                        st.warning(f"⚠️ Connection issue: {str(e)}")
+                        del st.session_state.sheets_manager
+                        sheets_manager = None
+            elif use_sheets:
+                st.warning("⚠️ Please provide Service Account JSON and Spreadsheet ID")
+
+        st.markdown("---")
         
         # Model selection
         model = st.selectbox(
@@ -186,45 +248,85 @@ def main():
             if not topic.strip():
                 st.error("❌ Please enter a topic for your blog post")
                 return
-            
+
             if not reference_blog.strip():
                 st.error("❌ Please enter a reference blog URL for style matching")
                 return
-            
+
             if len(topic.strip()) > MAX_TOPIC_LENGTH:
                 st.error(f"❌ Topic too long. Maximum {MAX_TOPIC_LENGTH} characters allowed.")
                 return
-                
+
             if len(requirements) > MAX_REQUIREMENTS_LENGTH:
                 st.error(f"❌ Requirements too long. Maximum {MAX_REQUIREMENTS_LENGTH} characters allowed.")
                 return
-                
+
             if len(api_key) > MAX_API_KEY_LENGTH:
                 st.error("❌ Invalid API key format.")
                 return
-            
+
             try:
                 # Use secure context manager for API key
                 with temporary_env_var("OPENAI_API_KEY", api_key):
                     # Initialize orchestrator with selected model
                     orchestrator = BlogAgentOrchestrator(model=model)
-                    
+
                     # Progress tracking
                     progress_bar = st.progress(0)
                     status_text = st.empty()
-                    
+
                     # Callback function to update status
                     def update_status(message, progress):
                         status_text.text(message)
                         progress_bar.progress(progress)
-                    
+
+                    # Check for cached style guide if sheets enabled
+                    cached_style = None
+                    if sheets_manager:
+                        try:
+                            update_status("🔍 Checking for cached style guide...", 5)
+                            cached_style = sheets_manager.get_cached_style_guide(reference_blog)
+                            if cached_style:
+                                st.info(f"📋 Using cached style guide for {reference_blog} (last updated: {cached_style['last_updated']})")
+                        except Exception as e:
+                            st.warning(f"⚠️ Could not access cached style guide: {str(e)}")
+                            cached_style = None
+
                     # Generate blog post with real-time updates
                     results = orchestrator.create_blog_post(
                         topic=topic,
                         reference_blog=reference_blog,
                         requirements=requirements,
-                        status_callback=update_status
+                        status_callback=update_status,
+                        cached_style_guide=cached_style['style_guide'] if cached_style else None
                     )
+
+                    # Save results to sheets if enabled
+                    if sheets_manager and "error" not in results:
+                        try:
+                            update_status("💾 Saving to Google Sheets...", 95)
+
+                            # Save style guide if it was freshly generated
+                            if not cached_style and "style_guide" in results:
+                                sheets_manager.save_style_guide(
+                                    reference_blog,
+                                    results["style_guide"]
+                                )
+
+                            # Save generated content
+                            sheets_manager.save_generated_content(
+                                topic,
+                                reference_blog,
+                                results
+                            )
+
+                            # Update blog source stats
+                            sheets_manager.update_blog_source_stats(reference_blog, success=True)
+
+                            st.success("✅ Content saved to Google Sheets!")
+                        except Exception as e:
+                            st.warning(f"⚠️ Could not save to Google Sheets: {str(e)}")
+                            # Continue without failing the entire operation
                 
                 # Display results
                 if "error" in results:
@@ -514,9 +616,50 @@ def main():
                             st.info("SEO analysis not available")
                         
             except Exception as e:
-                st.error(f"❌ An error occurred. Please check your inputs and try again.")
+                import traceback
+                error_traceback = traceback.format_exc()
+
+                st.error(f"❌ An error occurred: {str(e)}")
                 st.info("💡 Make sure your OpenAI API key is valid and has access to the Agents API")
-    
+
+                # Show detailed error for debugging
+                st.subheader("🔍 Debug Information")
+                st.code(error_traceback, language="python")
+
+    # Show content history if sheets enabled
+    if sheets_manager and st.checkbox("📋 Show Content History", value=False):
+        st.header("📋 Content History")
+
+        try:
+            history = sheets_manager.get_content_history(limit=10)
+            if history:
+                for item in history:
+                    with st.expander(f"📝 {item['Topic']} ({item['Date_Created']})"):
+                        col1, col2, col3 = st.columns(3)
+                        with col1:
+                            st.metric("Source Blog", item['Source_Blog'])
+                        with col2:
+                            st.metric("Word Count", item['Word_Count'])
+                        with col3:
+                            st.metric("SEO Score", item['SEO_Score'] if item['SEO_Score'] else 'N/A')
+
+                        if st.button(f"📄 View Content", key=f"view_{item['ID']}"):
+                            st.markdown("### Generated Content")
+                            st.markdown(item['Final_Content'])
+            else:
+                st.info("No content history found")
+
+            # Blog source statistics
+            st.subheader("📊 Blog Source Performance")
+            source_stats = sheets_manager.get_blog_source_stats()
+            if source_stats:
+                for source in source_stats[:5]:  # Show top 5
+                    st.write(f"**{source['Domain']}** - Success: {source['Success_Count']}, Last used: {source['Last_Analyzed']}")
+            else:
+                st.info("No blog source statistics available")
+        except Exception as e:
+            st.error(f"❌ Could not load content history: {str(e)}")
+
     # Footer
     st.markdown("---")
     st.markdown(

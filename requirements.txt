@@ -5,3 +5,5 @@ requests
 feedparser
 beautifulsoup4
 markdown
+gspread
+google-auth

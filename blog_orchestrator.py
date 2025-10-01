@@ -318,16 +318,23 @@ class BlogAgentOrchestrator:
         if hasattr(self, '_thread_pool'):
             self._thread_pool.shutdown(wait=True)
 
-    def create_blog_post(self, topic: str, reference_blog: str, requirements: str = "", status_callback=None) -> Dict[str, str]:
+    def create_blog_post(self, topic: str, reference_blog: str, requirements: str = "", status_callback=None, cached_style_guide: str = None) -> Dict[str, str]:
         """Main workflow: orchestrates all 7 agents to create style-matched blog post."""
         results = {}
-        
+
         try:
-            # Step 1: Analyze reference style
-            if status_callback:
-                status_callback("🎨 Analyzing blog style...", 10)
-            print(f"🎨 Analyzing {reference_blog} style...")
-            style_guide = self.analyze_blog_style(reference_blog, status_callback)
+            # Step 1: Analyze reference style (or use cached)
+            if cached_style_guide:
+                if status_callback:
+                    status_callback("📋 Using cached style guide...", 15)
+                print(f"📋 Using cached style guide for {reference_blog}")
+                style_guide = cached_style_guide
+            else:
+                if status_callback:
+                    status_callback("🎨 Analyzing blog style...", 10)
+                print(f"🎨 Analyzing {reference_blog} style...")
+                style_guide = self.analyze_blog_style(reference_blog, status_callback)
+
             results["style_guide"] = style_guide
             
             # Step 2: Check for content duplication
