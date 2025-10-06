@@ -284,6 +284,14 @@ def main():
             help="Enter keywords you want to rank for, separated by commas. These will be prioritized in topic generation."
         )
 
+        # Optional product/page target
+        product_target = st.text_area(
+            "🛍️ Product/Page Target (Optional)",
+            placeholder="e.g., Page URL: https://mystore.com/products/product\nDescription: Brief description of what the page offers and its key benefits...",
+            height=100,
+            help="Enter a product page, landing page, or service page URL and/or description. Topics will be generated to naturally promote this page."
+        )
+
         if st.button("🎯 Generate Topic Ideas", help="AI-powered topic suggestions based on reference blog"):
             if not reference_blog.strip():
                 st.error("⚠️ Please enter a reference blog URL first")
@@ -327,12 +335,13 @@ def main():
                             except Exception as e:
                                 st.warning(f"⚠️ Could not fetch trending keywords: {str(e)}")
 
-                        # Generate topics informed by all keywords
+                        # Generate topics informed by all keywords and product target
                         topics = orchestrator.generate_topic_ideas(
                             reference_blog,
                             preferences="",
                             status_callback=update_status,
-                            trending_keywords=all_keywords if all_keywords else None
+                            trending_keywords=all_keywords if all_keywords else None,
+                            product_target=product_target.strip() if product_target.strip() else None
                         )
 
                         # Enrich with detailed keyword data
@@ -426,7 +435,16 @@ def main():
 (max {MAX_REQUIREMENTS_LENGTH} characters)""",
             help="Specific requirements for your blog post"
         )
-        
+
+        # Product/Page target for blog generation
+        blog_product_target = st.text_area(
+            "🛍️ Product/Page Target (Optional)",
+            placeholder="e.g., Page URL: https://mystore.com/products/product\nDescription: Brief description of what the page offers and its key benefits...",
+            height=100,
+            help="Enter a product page, landing page, or service page URL and/or description. The blog post will naturally promote this page.",
+            key="blog_product_target"
+        )
+
         # Generate button
         generate_button = st.button(
             "🚀 Generate Blog Post",
@@ -492,7 +510,8 @@ def main():
                         reference_blog=reference_blog,
                         requirements=requirements,
                         status_callback=update_status,
-                        cached_style_guide=cached_style['style_guide'] if cached_style else None
+                        cached_style_guide=cached_style['style_guide'] if cached_style else None,
+                        product_target=blog_product_target.strip() if blog_product_target.strip() else None
                     )
 
                     # Save results to sheets if enabled

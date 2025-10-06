@@ -174,12 +174,14 @@ class KeywordResearcher:
                     trend_scores[keyword] = 0
 
             # Add delay to avoid rate limiting
-            time.sleep(1)
+            time.sleep(2)
 
             return trend_scores
 
         except Exception as e:
-            st.warning(f"⚠️ Google Trends error: {str(e)}")
+            # Silently fail on rate limits to avoid spam
+            # Rate limited - wait before next request
+            time.sleep(5)
             return {kw: 0 for kw in keywords}
 
     def get_related_queries(self, keyword: str) -> List[str]:
@@ -193,6 +195,9 @@ class KeywordResearcher:
             List of related query strings
         """
         try:
+            # Add delay before request to avoid rate limiting
+            time.sleep(2)
+
             self.pytrends.build_payload([keyword], timeframe='today 3-m', geo='US')
 
             related = self.pytrends.related_queries()
@@ -203,11 +208,15 @@ class KeywordResearcher:
             # Get top 10 related queries
             top_queries = related[keyword]['top']
             if not top_queries.empty:
+                # Add delay after successful request
+                time.sleep(1)
                 return top_queries['query'].head(10).tolist()
 
             return []
 
         except Exception as e:
+            # Rate limited - wait longer before next request
+            time.sleep(5)
             return []
 
     def enrich_topics_with_keyword_data(self, topics: List[Dict]) -> List[Dict]:

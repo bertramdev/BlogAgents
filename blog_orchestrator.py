@@ -347,9 +347,14 @@ class BlogAgentOrchestrator:
         if hasattr(self, '_thread_pool'):
             self._thread_pool.shutdown(wait=True)
 
-    def create_blog_post(self, topic: str, reference_blog: str, requirements: str = "", status_callback=None, cached_style_guide: str = None) -> Dict[str, str]:
+    def create_blog_post(self, topic: str, reference_blog: str, requirements: str = "", status_callback=None, cached_style_guide: str = None, product_target: str = None) -> Dict[str, str]:
         """Main workflow: orchestrates all 7 agents to create style-matched blog post."""
         results = {}
+
+        # Add product target to requirements if provided
+        if product_target:
+            product_instruction = f"\n\nIMPORTANT - PRODUCT/PAGE TO PROMOTE:\n{product_target}\n\nNaturally incorporate mentions of this product/page where relevant. Provide value first, then subtly position the product as a helpful solution. Include a link if a URL was provided."
+            requirements = requirements + product_instruction if requirements else product_instruction
 
         try:
             # Step 1: Analyze reference style (or use cached)
@@ -627,7 +632,7 @@ class BlogAgentOrchestrator:
         """Legacy function name - calls create_blog_post internally."""
         return self.create_blog_post(topic, reference_blog, requirements)
 
-    def generate_topic_ideas(self, reference_blog: str, preferences: str = "", status_callback=None, trending_keywords: List[str] = None) -> List[Dict]:
+    def generate_topic_ideas(self, reference_blog: str, preferences: str = "", status_callback=None, trending_keywords: List[str] = None, product_target: str = None) -> List[Dict]:
         """
         Generate topic ideas for a blog based on their content strategy and trending keywords
 
@@ -636,6 +641,7 @@ class BlogAgentOrchestrator:
             preferences: Optional user preferences (industry, audience, content type)
             status_callback: Optional callback for progress updates
             trending_keywords: Optional list of trending keywords to inform topic generation
+            product_target: Optional product/service information to promote naturally
 
         Returns:
             List of topic idea dicts
@@ -656,18 +662,31 @@ class BlogAgentOrchestrator:
                 {', '.join(trending_keywords[:10])}
                 """
 
+            # Build product context if provided
+            product_context = ""
+            if product_target:
+                product_context = f"""
+
+                PRODUCT/SERVICE TO PROMOTE:
+                {product_target}
+
+                IMPORTANT: Create topics that naturally lead to this product as a solution. The content should provide value first, then subtly position the product as helpful. Avoid being overly promotional.
+                """
+
             prompt = f"""
             Generate 5 topic ideas for the blog: {reference_blog}
 
             Additional preferences:
             {preferences if preferences else "No specific preferences"}
             {keyword_context}
+            {product_context}
 
             Instructions:
             1. Quickly search {reference_blog} for 3-5 recent articles to understand their style
             2. Generate 5 specific, actionable topic ideas that match their content style
             3. Focus on topics they HAVEN'T covered yet
             4. If trending keywords were provided, prioritize topics that incorporate those high-value keywords
+            5. If a product target was provided, create topics that naturally allow mentioning/promoting the product while providing genuine value
 
             For EACH topic, use this EXACT format:
             ## 1. [Compelling Title Here]
