@@ -110,6 +110,25 @@ def main():
             help="Your OpenAI API key for the Agents SDK"
         )
 
+        # Model selection
+        model = st.selectbox(
+            "OpenAI Model",
+            options=[
+                "gpt-5",             # GPT-5 main reasoning model
+                "gpt-5-mini",        # GPT-5 efficient version
+                "gpt-5-nano",        # GPT-5 smallest version
+                "gpt-4o",            # GPT-4o flagship model
+                "gpt-4o-mini",       # GPT-4o cost-effective
+                "chatgpt-4o-latest", # Latest GPT-4o updates
+                "gpt-4.1",           # GPT-4.1 flagship
+                "gpt-4.1-mini",      # GPT-4.1 cost-effective
+            ],
+            index=0,
+            help="All models support WebSearchTool for style analysis and research. gpt-5 is recommended for best performance."
+        )
+
+        st.markdown("---")
+
         # Google Sheets Configuration
         st.subheader("📊 Google Sheets Integration")
         use_sheets = st.checkbox(
@@ -231,23 +250,6 @@ def main():
 
         st.markdown("---")
 
-        # Model selection
-        model = st.selectbox(
-            "OpenAI Model",
-            options=[
-                "gpt-5",             # GPT-5 main reasoning model
-                "gpt-5-mini",        # GPT-5 efficient version
-                "gpt-5-nano",        # GPT-5 smallest version
-                "gpt-4o",            # GPT-4o flagship model
-                "gpt-4o-mini",       # GPT-4o cost-effective
-                "chatgpt-4o-latest", # Latest GPT-4o updates
-                "gpt-4.1",           # GPT-4.1 flagship
-                "gpt-4.1-mini",      # GPT-4.1 cost-effective
-            ],
-            index=0,
-            help="All models support WebSearchTool for style analysis and research. gpt-5 is recommended for best performance."
-        )
-        
         # Reference blog input
         reference_blog = st.text_input(
             "Reference Blog/RSS Feed",
