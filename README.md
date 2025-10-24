@@ -10,13 +10,24 @@ Blog Agents is a sophisticated content generation system that uses multiple AI a
 
 ### 🎨 **Intelligent Style Matching**
 - Analyzes reference blogs to extract writing patterns, tone, and voice
+- Supports specific reference pages for focused style analysis
 - Matches headline structure, paragraph flow, and vocabulary
 - Preserves authentic voice while creating original content
+
+### 💡 **AI-Powered Topic Generation**
+- Generate topic ideas based on reference blog style
+- Target specific keywords for SEO optimization
+- Include product/page targets for content promotion
+- Automatic duplication detection against existing content
+- Google Trends integration for trending keywords
+- Google Ads API integration for search volume and competition data
 
 ### 🔍 **Comprehensive Research & Analysis**
 - Web search integration for up-to-date information
 - Content duplication detection to ensure originality
 - Multi-perspective research with source validation
+- SEO-optimized internal linking
+- Comprehensive SEO performance analysis
 
 ### 🤖 **Multi-Agent Architecture**
 - **Style Analyzer**: Extracts writing patterns from reference content
@@ -27,11 +38,18 @@ Blog Agents is a sophisticated content generation system that uses multiple AI a
 - **Content Editor**: Polishes grammar, flow, and readability
 - **SEO Analyzer**: Provides actionable SEO recommendations
 
+### 📊 **Data Persistence & Tracking**
+- Google Sheets integration for content history
+- Automatic topic caching to prevent duplicates
+- Track used vs. unused topic ideas
+- Performance analytics by reference blog
+
 ### 🚀 **Modern Interface**
 - Clean Streamlit web interface
 - Real-time progress tracking
-- Tabbed output for easy content review
-- Download functionality for generated content
+- Tabbed output for easy content review (Final Post, Style Guide, Research, SEO Analysis)
+- Multiple download formats (Markdown, HTML, Word Document, JSON)
+- Content history viewer
 
 ## Quick Start
 
@@ -98,10 +116,18 @@ All models support WebSearchTool for style analysis and research:
 
 ## Workflow
 
-1. **Style Analysis**: Analyzes reference blog for writing patterns
+### Topic Generation (Optional)
+1. **Keyword Research**: Fetches trending keywords via Google Trends
+2. **Topic Ideas**: AI generates topic ideas with target keywords and angles
+3. **Enrichment**: Adds search volume, competition, and trend data
+4. **Duplication Check**: Compares against existing blog topics from RSS feed
+5. **Selection**: Choose a topic and transfer to blog generator
+
+### Blog Post Generation
+1. **Style Analysis**: Analyzes reference blog for writing patterns (optionally from specific pages)
 2. **Duplication Check**: Searches for existing content on the topic
 3. **Research**: Gathers comprehensive information and insights
-4. **Content Creation**: Writes blog post matching the analyzed style
+4. **Content Creation**: Writes blog post matching the analyzed style with product/page targeting
 5. **Internal Linking**: Adds strategic internal links for SEO
 6. **Editing**: Polishes content while preserving style and links
 7. **SEO Analysis**: Provides optimization recommendations
@@ -109,10 +135,29 @@ All models support WebSearchTool for style analysis and research:
 ## Configuration
 
 ### Environment Variables
+
+#### Required
 ```bash
 OPENAI_API_KEY=your_openai_api_key_here
-OPENAI_ORG_ID=your_org_id_here  # Optional
 ```
+
+#### Optional
+```bash
+# OpenAI Organization
+OPENAI_ORG_ID=your_org_id_here
+
+# Google Sheets Integration
+GOOGLE_APPLICATION_CREDENTIALS=/path/to/service-account.json
+
+# Google Ads API (for keyword research)
+GOOGLE_ADS_DEVELOPER_TOKEN=your_developer_token
+GOOGLE_ADS_CLIENT_ID=your_client_id
+GOOGLE_ADS_CLIENT_SECRET=your_client_secret
+GOOGLE_ADS_REFRESH_TOKEN=your_refresh_token
+GOOGLE_ADS_CUSTOMER_ID=your_customer_id
+```
+
+Note: Google Trends keyword research works without Google Ads API, but provides trend-based estimates instead of actual search volume data.
 
 ### Security Features
 - Input validation and sanitization
@@ -123,11 +168,18 @@ OPENAI_ORG_ID=your_org_id_here  # Optional
 ## Output
 
 The system generates:
-- **Final Blog Post**: Polished, style-matched content
+- **Final Blog Post**: Polished, style-matched content with internal links
 - **Style Guide**: Extracted writing patterns and guidelines
 - **Research Data**: Comprehensive topic research and insights
-- **SEO Analysis**: Actionable optimization recommendations
-- **Duplication Report**: Content uniqueness assessment
+- **Writer Draft**: Initial content before SEO optimization
+- **Content With Links**: Blog post with strategic internal linking
+- **SEO Analysis**: Comprehensive performance analysis and recommendations
+
+### Download Formats
+- Markdown (.md)
+- HTML (.html)
+- Microsoft Word (.docx)
+- JSON (complete results data)
 
 ## Contributing
 
@@ -139,7 +191,7 @@ The system generates:
 
 ## License
 
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+This project is licensed under the Apache License 2.0 - see the [LICENSE](LICENSE) file for details.
 
 ## Support
 

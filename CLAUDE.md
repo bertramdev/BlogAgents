@@ -29,10 +29,13 @@ streamlit run app.py
 # Features:
 # - User-friendly interface for API key input
 # - Reference blog/RSS feed selection
-# - Topic and requirements input
+# - Topic idea generator with keyword and product targeting
+# - Google Sheets integration for content tracking
+# - Keyword research with Google Trends and Google Ads API
+# - Specific reference pages for style analysis
 # - Real-time progress tracking
-# - Tabbed output (Final Post, Style Guide, Research)
-# - Download functionality
+# - Tabbed output (Final Post, Style Guide, Research, SEO Analysis)
+# - Download functionality (Markdown, HTML, Word, JSON)
 ```
 
 ### Command Line
@@ -52,12 +55,15 @@ python blog_orchestrator.py
 This is a multi-agent blog content generation system using the OpenAI Agents SDK. The core architecture follows an orchestrated pipeline pattern:
 
 ### BlogAgentOrchestrator Class
-Central coordinator that manages four specialized agents in a sequential workflow:
+Central coordinator that manages seven specialized agents in a sequential workflow:
 
-1. **Style Analyzer Agent**: Uses WebSearchTool to fetch and analyze content from reference blogs/RSS feeds, extracting writing patterns, tone, structure, and voice characteristics
-2. **Research Agent**: Conducts web research on the given topic using WebSearchTool to gather facts, statistics, and current information
-3. **Writer Agent**: Generates blog content that matches the analyzed style while incorporating the research data
-4. **Editor Agent**: Reviews and polishes the content while preserving the matched style characteristics
+1. **Style Analyzer Agent**: Uses WebSearchTool to fetch and analyze content from reference blogs/RSS feeds (or specific pages), extracting writing patterns, tone, structure, and voice characteristics
+2. **Content Checker Agent**: Searches for existing content on the topic to ensure uniqueness and suggest differentiation angles
+3. **Research Agent**: Conducts web research on the given topic using WebSearchTool to gather facts, statistics, and current information
+4. **Writer Agent**: Generates blog content that matches the analyzed style while incorporating research data and product/page targets
+5. **Internal Linker Agent**: Adds strategic internal links to relevant pages for SEO optimization
+6. **Editor Agent**: Reviews and polishes the content while preserving style characteristics and internal links
+7. **SEO Analyzer Agent**: Provides comprehensive SEO performance analysis and optimization recommendations
 
 ### Agent Configuration
 - All agents use `Runner.run_sync()` for synchronous execution
@@ -67,25 +73,59 @@ Central coordinator that manages four specialized agents in a sequential workflo
 
 ### Key Methods
 - `create_blog_post()`: Main workflow method that orchestrates the full pipeline
-- `analyze_blog_style()`: Standalone method for extracting style from any blog/RSS feed
+- `analyze_blog_style()`: Standalone method for extracting style from any blog/RSS feed or specific pages
+- `generate_topic_ideas()`: AI-powered topic generation with keyword research and duplication checking
+- `extract_blog_topics()`: Extract existing topics from RSS feeds for duplication prevention
 - `create_style_matched_post()`: Alias method for backward compatibility
 
 ### Data Flow
 The system passes structured data between agents:
 ```
-Topic + Reference Blog → Style Analysis → Research → Style-Matched Writing → Edited Content
+Topic + Reference Blog + Product Target → Style Analysis → Duplication Check → Research → Style-Matched Writing → Internal Linking → Editing → SEO Analysis
 ```
 
 Each step produces intermediate results stored in a results dictionary, allowing for debugging and inspection of the pipeline stages.
 
+### Additional Components
+
+**SheetsManager Class**: Manages Google Sheets integration for data persistence
+- Stores generated blog posts with metadata (topic, date, reference blog)
+- Caches blog topics from RSS feeds to prevent duplicate content generation
+- Tracks topic idea usage and keyword research data
+- Provides content history and performance analytics
+
+**KeywordResearcher Class**: Integrates keyword research capabilities
+- Google Trends integration via pytrends for trending keywords and related queries
+- Google Ads API integration for search volume and competition metrics
+- Enriches topic ideas with SEO data (search volume, competition, trend status)
+- Provides trend-based estimates when Google Ads API is not configured
+
 ## Environment Variables Required
 
+### Required
 - `OPENAI_API_KEY`: Required for OpenAI Agents SDK
+
+### Optional
 - `OPENAI_ORG_ID`: Optional organization ID for billing
+- `GOOGLE_ADS_DEVELOPER_TOKEN`: For Google Ads API keyword data
+- `GOOGLE_ADS_CLIENT_ID`: OAuth2 client ID for Google Ads
+- `GOOGLE_ADS_CLIENT_SECRET`: OAuth2 client secret for Google Ads
+- `GOOGLE_ADS_REFRESH_TOKEN`: OAuth2 refresh token for Google Ads
+- `GOOGLE_ADS_CUSTOMER_ID`: Your Google Ads customer account ID
+- `GOOGLE_APPLICATION_CREDENTIALS`: Path to Google Sheets service account JSON file (for Sheets integration)
 
 ## Dependencies
 
 Core dependencies managed in requirements.txt:
-- `openai-agents`: OpenAI Agents SDK for multi-agent orchestration
-- `python-dotenv`: Environment variable management
-- `requests`, `feedparser`, `beautifulsoup4`: Web content fetching (legacy, not actively used)
+- `openai-agents==0.3.3`: OpenAI Agents SDK for multi-agent orchestration
+- `streamlit==1.50.0`: Web interface framework
+- `python-dotenv==1.1.1`: Environment variable management
+- `gspread==6.2.1`: Google Sheets API client
+- `google-auth==2.41.1`: Google authentication library
+- `google-ads==28.0.0`: Google Ads API for keyword research
+- `pytrends==4.9.2`: Google Trends unofficial API
+- `feedparser==6.0.12`: RSS feed parsing for topic extraction
+- `beautifulsoup4==4.14.2`: HTML parsing for web content
+- `requests==2.32.5`: HTTP library for web requests
+
+All versions are pinned for reproducibility.
