@@ -398,6 +398,7 @@ def main():
 
                         # Store in session state
                         st.session_state.generated_topics = topics
+                        st.session_state.topic_gen_product_target = product_target.strip() if product_target.strip() else ""
                         status_text.empty()
                         progress_bar.empty()
 
@@ -442,6 +443,10 @@ Target Keywords: {', '.join(topic_idea.get('keywords', []))}
 Content Type: {topic_idea.get('content_type', 'N/A')}
 Rationale: {topic_idea.get('rationale', 'N/A')}"""
                         st.session_state.requirements_input = requirements_text
+
+                        # Transfer product target from topic generator to blog generator
+                        if 'topic_gen_product_target' in st.session_state:
+                            st.session_state.blog_product_target = st.session_state.topic_gen_product_target
 
                         # Mark topic as used in Google Sheets if enabled
                         if sheets_manager and 'ID' in topic_idea:
