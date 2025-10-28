@@ -790,7 +790,7 @@ class BlogAgentOrchestrator:
             """
 
             result = self._run_agent_safely(
-                self.agents["research"],  # Use research agent with WebSearchTool
+                self.agents["researcher"],  # Use researcher agent with WebSearchTool
                 prompt,
                 timeout_seconds=120
             )
