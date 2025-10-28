@@ -57,5 +57,13 @@ logs/
 
 # Temporary files
 *.tmp
-*.tempai-projects-*.json
+*.temp
+
+# Service account credentials
+ai-projects-*.json
+*-credentials.json
+service-account*.json
+credentials.json
+
+# All JSON files (except package files which are tracked)
 *.json

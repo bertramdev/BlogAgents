@@ -24,15 +24,18 @@ def temporary_env_var(key, value):
 
 def validate_blog_url(url):
     """Validate and sanitize blog URL input to prevent SSRF attacks."""
+    import ipaddress
+    import socket
+
     if not url or not url.strip():
         return None
-    
+
     url = url.strip()
-    
+
     # Add https:// if no protocol specified
     if not url.startswith(('http://', 'https://')):
         url = 'https://' + url
-    
+
     # Basic URL format validation
     url_pattern = re.compile(
         r'^https?://'  # http:// or https://
@@ -40,29 +43,77 @@ def validate_blog_url(url):
         r'\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3})'  # IP
         r'(?::\d+)?'  # optional port
         r'(?:/?|[/?]\S+)$', re.IGNORECASE)
-    
+
     if not url_pattern.match(url):
         raise ValueError("Invalid URL format")
-    
+
     parsed = urlparse(url)
-    
-    # Block internal/private IP ranges and localhost
-    if parsed.hostname:
-        hostname = parsed.hostname.lower()
-        
-        # Block localhost and loopback
-        if hostname in ['localhost', '127.0.0.1', '0.0.0.0', '::1']:
-            raise ValueError("Access to localhost is not allowed")
-        
-        # Block private IP ranges
-        if (hostname.startswith('10.') or 
-            hostname.startswith('172.16.') or hostname.startswith('172.17.') or 
-            hostname.startswith('172.18.') or hostname.startswith('172.19.') or
-            hostname.startswith('172.2') or hostname.startswith('172.3') or
-            hostname.startswith('192.168.') or
-            hostname == '169.254.169.254'):  # AWS metadata endpoint
-            raise ValueError("Access to private network ranges is not allowed")
-    
+
+    if not parsed.hostname:
+        raise ValueError("Invalid hostname")
+
+    hostname = parsed.hostname.lower()
+
+    # Block localhost and loopback names
+    localhost_names = ['localhost', 'localhost.localdomain']
+    if hostname in localhost_names:
+        raise ValueError("Access to localhost is not allowed")
+
+    # Block cloud metadata endpoints by hostname
+    metadata_hostnames = [
+        'metadata.google.internal',
+        'metadata.google.com',
+        'metadata',
+        'instance-data'
+    ]
+    if hostname in metadata_hostnames:
+        raise ValueError("Access to metadata endpoints is not allowed")
+
+    # Resolve hostname to IP and validate
+    try:
+        addr_info = socket.getaddrinfo(hostname, None)
+
+        for addr in addr_info:
+            ip_str = addr[4][0]
+
+            try:
+                ip = ipaddress.ip_address(ip_str)
+
+                # Block loopback addresses (127.0.0.0/8, ::1)
+                if ip.is_loopback:
+                    raise ValueError("Access to loopback addresses is not allowed")
+
+                # Block private networks (10.0.0.0/8, 172.16.0.0/12, 192.168.0.0/16, fc00::/7)
+                if ip.is_private:
+                    raise ValueError("Access to private network ranges is not allowed")
+
+                # Block link-local (169.254.0.0/16, fe80::/10)
+                if ip.is_link_local:
+                    raise ValueError("Access to link-local addresses is not allowed")
+
+                # Block multicast
+                if ip.is_multicast:
+                    raise ValueError("Access to multicast addresses is not allowed")
+
+                # Additional IPv4 checks
+                if isinstance(ip, ipaddress.IPv4Address):
+                    # Block 0.0.0.0/8
+                    if ip_str.startswith('0.'):
+                        raise ValueError("Invalid IP address")
+
+                    # Explicit cloud metadata check
+                    if ip_str == '169.254.169.254':
+                        raise ValueError("Access to cloud metadata endpoints is not allowed")
+
+            except ValueError as e:
+                # Re-raise validation errors
+                raise ValueError(f"Invalid IP address: {e}")
+
+    except socket.gaierror:
+        raise ValueError("Cannot resolve hostname")
+    except Exception as e:
+        raise ValueError(f"DNS resolution error: {e}")
+
     return url
 
 # Security constants
