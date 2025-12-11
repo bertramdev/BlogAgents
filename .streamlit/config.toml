@@ -12,8 +12,9 @@ borderColor = "#224AA8"
 font = "Lato"
 
 [server]
-# Optional: disable file watcher for better performance
-fileWatcherType = "none"
+# Enable file watcher for auto-reload on save
+fileWatcherType = "auto"
+runOnSave = true
 
 [browser]
 # Optional: automatically open browser

@@ -1,141 +1,172 @@
-import { webSearchTool, RunContext, Agent, AgentInputItem, Runner, withTrace } from "@openai/agents";
-import { z } from "zod";
+from agents import WebSearchTool, RunContextWrapper, Agent, ModelSettings, TResponseInputItem, Runner, RunConfig, trace
+from pydantic import BaseModel
+from openai.types.shared.reasoning import Reasoning
 
-
-// Tool definitions
-const webSearchPreview = webSearchTool({
-  searchContextSize: "medium",
-  userLocation: {
-    type: "approximate"
+# Tool definitions
+web_search_preview = WebSearchTool(
+  search_context_size="medium",
+  user_location={
+    "type": "approximate"
   }
-})
-const WritingStyleSchema = z.object({ writing_style_output: z.string() });
-const TextToJsonSchema = z.object({ existing_blog_posts_to_avoid: z.array(z.string()), high_performing_pages: z.array(z.string()), root_blog_url: z.string(), seo_keywords: z.array(z.string()), target_product_urls: z.array(z.string()), topics: z.array(z.string()), writing_requirements: z.string() });
-const ResearchSchema = z.object({ research_output: z.string() });
-const WriterSchema = z.object({ writer_output: z.string() });
-const SeoAnalyzerSchema = z.object({ seo_analzyer_first_pass_output: z.string() });
-const InternalLinksSchema = z.object({ internal_links_output: z.string() });
-interface WritingStyleContext {
-  stateRootBlogUrl: string;
-  stateHighPerformingPages: string;
-}
-const writingStyleInstructions = (runContext: RunContext<WritingStyleContext>, _agent: Agent<WritingStyleContext>) => {
-  const { stateRootBlogUrl, stateHighPerformingPages } = runContext.context;
-  return `Analyze the writing style of ${stateRootBlogUrl}.
+)
+class WritingStyleSchema(BaseModel):
+  writing_style_output: str
+
+
+class TextToJsonSchema(BaseModel):
+  existing_blog_posts_to_avoid: list[str]
+  high_performing_pages: list[str]
+  root_blog_url: str
+  seo_keywords: list[str]
+  target_product_urls: list[str]
+  topics: list[str]
+  writing_requirements: str
+
+
+class ResearchSchema(BaseModel):
+  research_output: str
+
+
+class WriterSchema(BaseModel):
+  writer_output: str
+
+
+class SeoAnalyzerSchema(BaseModel):
+  seo_analzyer_first_pass_output: str
+
+
+class InternalLinksSchema(BaseModel):
+  internal_links_output: str
+
+
+class WritingStyleContext:
+  def __init__(self, state_root_blog_url: str, state_high_performing_pages: str):
+    self.state_root_blog_url = state_root_blog_url
+    self.state_high_performing_pages = state_high_performing_pages
+def writing_style_instructions(run_context: RunContextWrapper[WritingStyleContext], _agent: Agent[WritingStyleContext]):
+  state_root_blog_url = run_context.context.state_root_blog_url
+  state_high_performing_pages = run_context.context.state_high_performing_pages
+  return f"""Analyze the writing style of {state_root_blog_url}.
 
 PRIORITY: Analyze these specific high-performing posts first:
-${stateHighPerformingPages}
+{state_high_performing_pages}
 
 These pages should be the PRIMARY examples in your style guide.
 
 Instructions:
-1. Search for recent articles from ${stateRootBlogUrl}
+1. Search for recent articles from {state_root_blog_url}
 2. If specific pages were provided above, analyze those FIRST and prioritize their patterns
 3. Analyze multiple articles to identify consistent patterns
 4. Extract the publication's distinctive voice and style characteristics
 5. Create a detailed style guide that includes specific examples
 
-Focus on recent articles to capture current writing style. `
-}
-const writingStyle = new Agent({
-  name: "Writing Style",
-  instructions: writingStyleInstructions,
-  model: "gpt-5.1",
-  tools: [
-    webSearchPreview
+Focus on recent articles to capture current writing style. """
+writing_style = Agent(
+  name="Writing Style",
+  instructions=writing_style_instructions,
+  model="gpt-5.1",
+  tools=[
+    web_search_preview
   ],
-  outputType: WritingStyleSchema,
-  modelSettings: {
-    reasoning: {
-      effort: "high",
-      summary: "auto"
-    },
-    store: true
-  }
-});
+  output_type=WritingStyleSchema,
+  model_settings=ModelSettings(
+    store=True,
+    reasoning=Reasoning(
+      effort="high",
+      summary="auto"
+    )
+  )
+)
 
-interface TextToJsonContext {
-  workflowInputAsText: string;
-}
-const textToJsonInstructions = (runContext: RunContext<TextToJsonContext>, _agent: Agent<TextToJsonContext>) => {
-  const { workflowInputAsText } = runContext.context;
-  return `transform the following to json:
- ${workflowInputAsText}`
-}
-const textToJson = new Agent({
-  name: "text_to_json",
-  instructions: textToJsonInstructions,
-  model: "gpt-5.1",
-  outputType: TextToJsonSchema,
-  modelSettings: {
-    reasoning: {
-      effort: "low",
-      summary: "auto"
-    },
-    store: true
-  }
-});
 
-interface ResearchContext {
-  stateTopics: string;
-  stateWritingRequirements: string;
-  stateTargetProductUrls: string;
-}
-const researchInstructions = (runContext: RunContext<ResearchContext>, _agent: Agent<ResearchContext>) => {
-  const { stateTopics, stateWritingRequirements, stateTargetProductUrls } = runContext.context;
-  return `Research the topic: ${stateTopics}
+class TextToJsonContext:
+  def __init__(self, workflow_input_as_text: str):
+    self.workflow_input_as_text = workflow_input_as_text
+def text_to_json_instructions(run_context: RunContextWrapper[TextToJsonContext], _agent: Agent[TextToJsonContext]):
+  workflow_input_as_text = run_context.context.workflow_input_as_text
+  return f"""transform the following to json:
+ {workflow_input_as_text}"""
+text_to_json = Agent(
+  name="text_to_json",
+  instructions=text_to_json_instructions,
+  model="gpt-5.1",
+  output_type=TextToJsonSchema,
+  model_settings=ModelSettings(
+    store=True,
+    reasoning=Reasoning(
+      effort="low",
+      summary="auto"
+    )
+  )
+)
+
+
+class ResearchContext:
+  def __init__(self, state_topics: str, state_writing_requirements: str, state_target_product_urls: str):
+    self.state_topics = state_topics
+    self.state_writing_requirements = state_writing_requirements
+    self.state_target_product_urls = state_target_product_urls
+def research_instructions(run_context: RunContextWrapper[ResearchContext], _agent: Agent[ResearchContext]):
+  state_topics = run_context.context.state_topics
+  state_writing_requirements = run_context.context.state_writing_requirements
+  state_target_product_urls = run_context.context.state_target_product_urls
+  return f"""Research the topic: {state_topics}
 
 Requirements:
-${stateWritingRequirements}
+{state_writing_requirements}
 
 PRODUCT/PAGE TO PROMOTE: 
-${stateTargetProductUrls}                 
+{state_target_product_urls}                 
 
 Focus your research on:                                     
 - Recent developments or trends in this area                
 - Facts, statistics, and examples                            
 - Unique insights and perspectives
-- Practical, actionable information`
-}
-const research = new Agent({
-  name: "Research",
-  instructions: researchInstructions,
-  model: "gpt-5.1",
-  tools: [
-    webSearchPreview
+- Practical, actionable information"""
+research = Agent(
+  name="Research",
+  instructions=research_instructions,
+  model="gpt-5.1",
+  tools=[
+    web_search_preview
   ],
-  outputType: ResearchSchema,
-  modelSettings: {
-    reasoning: {
-      effort: "high",
-      summary: "auto"
-    },
-    store: true
-  }
-});
+  output_type=ResearchSchema,
+  model_settings=ModelSettings(
+    store=True,
+    reasoning=Reasoning(
+      effort="high",
+      summary="auto"
+    )
+  )
+)
 
-interface WriterContext {
-  stateTopics: string;
-  stateWritingStyle: string;
-  stateResearch: string;
-  stateWritingRequirements: string;
-  stateRootBlogUrl: string;
-}
-const writerInstructions = (runContext: RunContext<WriterContext>, _agent: Agent<WriterContext>) => {
-  const { stateTopics, stateWritingStyle, stateResearch, stateWritingRequirements, stateRootBlogUrl } = runContext.context;
-  return `Write a blog post about: ${stateTopics}
+
+class WriterContext:
+  def __init__(self, state_topics: str, state_writing_style: str, state_research: str, state_writing_requirements: str, state_root_blog_url: str):
+    self.state_topics = state_topics
+    self.state_writing_style = state_writing_style
+    self.state_research = state_research
+    self.state_writing_requirements = state_writing_requirements
+    self.state_root_blog_url = state_root_blog_url
+def writer_instructions(run_context: RunContextWrapper[WriterContext], _agent: Agent[WriterContext]):
+  state_topics = run_context.context.state_topics
+  state_writing_style = run_context.context.state_writing_style
+  state_research = run_context.context.state_research
+  state_writing_requirements = run_context.context.state_writing_requirements
+  state_root_blog_url = run_context.context.state_root_blog_url
+  return f"""Write a blog post about: {state_topics}
 
 STYLE GUIDE TO FOLLOW (including formatting patterns):
-${stateWritingStyle}
+{state_writing_style}
 
 RESEARCH DATA:
-${stateResearch}
+{state_research}
 
 REQUIREMENTS: 
-${stateWritingRequirements}
+{state_writing_requirements}
 
 CRITICAL FORMATTING INSTRUCTIONS:
-1. Write the post to closely match the style and voice of ${stateRootBlogUrl}
+1. Write the post to closely match the style and voice of {state_root_blog_url}
 2. Use the specific patterns, tone, and techniques identified in the style guide
 3. Pay special attention to the FORMATTING GUIDE section - match their heading structure, list usage, and emphasis patterns
 4. Output the content in proper markdown format that will render correctly
@@ -143,39 +174,41 @@ CRITICAL FORMATTING INSTRUCTIONS:
 6. Follow their bullet point vs. numbered list preferences
 7. Apply bold/italic emphasis in the same way they do
 
-The final output should be properly formatted markdown that matches both the writing style AND visual formatting of ${stateRootBlogUrl}`
-}
-const writer = new Agent({
-  name: "Writer",
-  instructions: writerInstructions,
-  model: "gpt-5.1",
-  tools: [
-    webSearchPreview
+The final output should be properly formatted markdown that matches both the writing style AND visual formatting of {state_root_blog_url}"""
+writer = Agent(
+  name="Writer",
+  instructions=writer_instructions,
+  model="gpt-5.1",
+  tools=[
+    web_search_preview
   ],
-  outputType: WriterSchema,
-  modelSettings: {
-    reasoning: {
-      effort: "high",
-      summary: "auto"
-    },
-    store: true
-  }
-});
+  output_type=WriterSchema,
+  model_settings=ModelSettings(
+    store=True,
+    reasoning=Reasoning(
+      effort="high",
+      summary="auto"
+    )
+  )
+)
 
-interface SeoAnalyzerContext {
-  stateWriterDraft: string;
-  stateTopics: string;
-  stateRootBlogUrl: string;
-}
-const seoAnalyzerInstructions = (runContext: RunContext<SeoAnalyzerContext>, _agent: Agent<SeoAnalyzerContext>) => {
-  const { stateWriterDraft, stateTopics, stateRootBlogUrl } = runContext.context;
-  return `Analyze this blog post draft for SEO optimization opportunities:
+
+class SeoAnalyzerContext:
+  def __init__(self, state_writer_draft: str, state_topics: str, state_root_blog_url: str):
+    self.state_writer_draft = state_writer_draft
+    self.state_topics = state_topics
+    self.state_root_blog_url = state_root_blog_url
+def seo_analyzer_instructions(run_context: RunContextWrapper[SeoAnalyzerContext], _agent: Agent[SeoAnalyzerContext]):
+  state_writer_draft = run_context.context.state_writer_draft
+  state_topics = run_context.context.state_topics
+  state_root_blog_url = run_context.context.state_root_blog_url
+  return f"""Analyze this blog post draft for SEO optimization opportunities:
 
 BLOG POST DRAFT:
-${stateWriterDraft}
+{state_writer_draft}
 
-TARGET TOPIC: ${stateTopics}
-PUBLICATION STYLE: ${stateRootBlogUrl}
+TARGET TOPIC: {state_topics}
+PUBLICATION STYLE: {state_root_blog_url}
 
 Provide specific, actionable SEO recommendations for:
 1. Heading structure and keyword optimization
@@ -184,50 +217,53 @@ Provide specific, actionable SEO recommendations for:
 4. Meta description suggestions
 5. Readability and structure enhancements
 
-Focus on recommendations that can be implemented in the editing phase.`
-}
-const seoAnalyzer = new Agent({
-  name: "SEO Analyzer",
-  instructions: seoAnalyzerInstructions,
-  model: "gpt-5.1",
-  tools: [
-    webSearchPreview
+Focus on recommendations that can be implemented in the editing phase."""
+seo_analyzer = Agent(
+  name="SEO Analyzer",
+  instructions=seo_analyzer_instructions,
+  model="gpt-5.1",
+  tools=[
+    web_search_preview
   ],
-  outputType: SeoAnalyzerSchema,
-  modelSettings: {
-    reasoning: {
-      effort: "high",
-      summary: "auto"
-    },
-    store: true
-  }
-});
+  output_type=SeoAnalyzerSchema,
+  model_settings=ModelSettings(
+    store=True,
+    reasoning=Reasoning(
+      effort="high",
+      summary="auto"
+    )
+  )
+)
 
-interface InternalLinksContext {
-  stateWriterDraft: string;
-  stateResponseSchemaRootBlogUrl: string;
-  stateSeoAnalyzeFirstPass: string;
-  stateResponseSchemaTopic: string;
-}
-const internalLinksInstructions = (runContext: RunContext<InternalLinksContext>, _agent: Agent<InternalLinksContext>) => {
-  const { stateWriterDraft, stateResponseSchemaRootBlogUrl, stateSeoAnalyzeFirstPass, stateResponseSchemaTopic } = runContext.context;
-  return `Add strategic internal links to this blog post:
+
+class InternalLinksContext:
+  def __init__(self, state_writer_draft: str, state_response_schema_root_blog_url: str, state_seo_analyze_first_pass: str, state_response_schema_topic: str):
+    self.state_writer_draft = state_writer_draft
+    self.state_response_schema_root_blog_url = state_response_schema_root_blog_url
+    self.state_seo_analyze_first_pass = state_seo_analyze_first_pass
+    self.state_response_schema_topic = state_response_schema_topic
+def internal_links_instructions(run_context: RunContextWrapper[InternalLinksContext], _agent: Agent[InternalLinksContext]):
+  state_writer_draft = run_context.context.state_writer_draft
+  state_response_schema_root_blog_url = run_context.context.state_response_schema_root_blog_url
+  state_seo_analyze_first_pass = run_context.context.state_seo_analyze_first_pass
+  state_response_schema_topic = run_context.context.state_response_schema_topic
+  return f"""Add strategic internal links to this blog post:
 
 BLOG POST CONTENT:
-${stateWriterDraft}
+{state_writer_draft}
 
 WEBSITE/DOMAIN: 
-${stateResponseSchemaRootBlogUrl}
+{state_response_schema_root_blog_url}
 
 SEO RECOMMENDATIONS TO CONSIDER:
-${stateSeoAnalyzeFirstPass}
+{state_seo_analyze_first_pass}
 
 CRITICAL Instructions:
-1. Use WebSearchTool to search for existing content on ${stateResponseSchemaRootBlogUrl} that relates to topics in this post
-2. Use search queries like: \"site:${stateResponseSchemaRootBlogUrl} [${stateResponseSchemaTopic}]\" to find specific pages
+1. Use WebSearchTool to search for existing content on {state_response_schema_root_blog_url} that relates to topics in this post
+2. Use search queries like: \"site:{state_response_schema_root_blog_url} [{state_response_schema_topic}]\" to find specific pages
 3. ONLY use URLs that you find in actual search results - never guess or construct URLs
 4. For each link you want to add:
-  - Search for the specific topic using site:${stateResponseSchemaRootBlogUrl} operator
+  - Search for the specific topic using site:{state_response_schema_root_blog_url} operator
   - Copy the EXACT URL from the search result
   - Use that exact URL in your markdown link
 5. Add 2-5 relevant internal links using natural anchor text (if found)
@@ -235,43 +271,46 @@ CRITICAL Instructions:
 7. Use markdown format: [anchor text](EXACT_URL_FROM_SEARCH)
 8. Each link MUST be verified through search - no exceptions
 
-Return the blog post with ONLY verified internal links added.  `
-}
-const internalLinks = new Agent({
-  name: "Internal Links",
-  instructions: internalLinksInstructions,
-  model: "gpt-5.1",
-  tools: [
-    webSearchPreview
+Return the blog post with ONLY verified internal links added.  """
+internal_links = Agent(
+  name="Internal Links",
+  instructions=internal_links_instructions,
+  model="gpt-5.1",
+  tools=[
+    web_search_preview
   ],
-  outputType: InternalLinksSchema,
-  modelSettings: {
-    reasoning: {
-      effort: "high",
-      summary: "auto"
-    },
-    store: true
-  }
-});
+  output_type=InternalLinksSchema,
+  model_settings=ModelSettings(
+    store=True,
+    reasoning=Reasoning(
+      effort="high",
+      summary="auto"
+    )
+  )
+)
 
-interface EditorContext {
-  stateRootBlogUrl: string;
-  stateWritingStyle: string;
-  inputOutputParsedInternalLinksOutput: string;
-  stateSeoAnalyzeFirstPass: string;
-}
-const editorInstructions = (runContext: RunContext<EditorContext>, _agent: Agent<EditorContext>) => {
-  const { stateRootBlogUrl, stateWritingStyle, inputOutputParsedInternalLinksOutput, stateSeoAnalyzeFirstPass } = runContext.context;
-  return `Edit this blog post while preserving the ${stateRootBlogUrl} style and internal links:
+
+class EditorContext:
+  def __init__(self, state_root_blog_url: str, state_writing_style: str, input_output_parsed_internal_links_output: str, state_seo_analyze_first_pass: str):
+    self.state_root_blog_url = state_root_blog_url
+    self.state_writing_style = state_writing_style
+    self.input_output_parsed_internal_links_output = input_output_parsed_internal_links_output
+    self.state_seo_analyze_first_pass = state_seo_analyze_first_pass
+def editor_instructions(run_context: RunContextWrapper[EditorContext], _agent: Agent[EditorContext]):
+  state_root_blog_url = run_context.context.state_root_blog_url
+  state_writing_style = run_context.context.state_writing_style
+  input_output_parsed_internal_links_output = run_context.context.input_output_parsed_internal_links_output
+  state_seo_analyze_first_pass = run_context.context.state_seo_analyze_first_pass
+  return f"""Edit this blog post while preserving the {state_root_blog_url} style and internal links:
 
 ORIGINAL STYLE GUIDE:
-${stateWritingStyle}
+{state_writing_style}
 
 DRAFT TO EDIT:
-${inputOutputParsedInternalLinksOutput}
+{input_output_parsed_internal_links_output}
 
 SEO RECOMMENDATIONS TO IMPLEMENT:
-${stateSeoAnalyzeFirstPass}
+{state_seo_analyze_first_pass}
 
 Instructions:
 - Improve grammar, flow, and clarity while maintaining the distinctive voice and style patterns
@@ -282,235 +321,214 @@ Instructions:
   - Don't remove or modify any [anchor text](URL) formatting
   - Balance SEO optimization with authentic brand voice
 
-Return your output as markdown format`
-}
-const editor = new Agent({
-  name: "Editor",
-  instructions: editorInstructions,
-  model: "gpt-5.1",
-  tools: [
-    webSearchPreview
+Return your output as markdown format"""
+editor = Agent(
+  name="Editor",
+  instructions=editor_instructions,
+  model="gpt-5.1",
+  tools=[
+    web_search_preview
   ],
-  modelSettings: {
-    reasoning: {
-      effort: "high",
-      summary: "auto"
-    },
-    store: true
-  }
-});
-
-type WorkflowInput = { input_as_text: string };
+  model_settings=ModelSettings(
+    store=True,
+    reasoning=Reasoning(
+      effort="high",
+      summary="auto"
+    )
+  )
+)
 
 
-// Main code entrypoint
-export const runWorkflow = async (workflow: WorkflowInput) => {
-  return await withTrace("blog_agent", async () => {
-    const state = {
-      response_schema: {
-        existing_blog_posts_to_avoid: [],
-        high_performing_pages: [],
-        root_blog_url: "",
-        seo_keywords: [],
-        target_product_urls: [],
-        topic: ""
+class WorkflowInput(BaseModel):
+  input_as_text: str
+
+
+# Main code entrypoint
+async def run_workflow(workflow_input: WorkflowInput):
+  with trace("blog_agent"):
+    state = {
+      "response_schema": {
+        "existing_blog_posts_to_avoid": [
+
+        ],
+        "high_performing_pages": [
+
+        ],
+        "root_blog_url": "",
+        "seo_keywords": [
+
+        ],
+        "target_product_urls": [
+
+        ],
+        "topic": ""
       },
-      global: {
-        existing_blog_posts_to_avoid: [],
-        high_performing_pages: [],
-        root_blog_url: "",
-        seo_keywords: [],
-        target_product_urls: [],
-        topic: ""
+      "global": {
+        "existing_blog_posts_to_avoid": [
+
+        ],
+        "high_performing_pages": [
+
+        ],
+        "root_blog_url": "",
+        "seo_keywords": [
+
+        ],
+        "target_product_urls": [
+
+        ],
+        "topic": ""
       },
-      existing_blog_posts_to_avoid: [],
-      high_performing_pages: [],
-      root_blog_url: null,
-      seo_keywords: [],
-      target_product_urls: [],
-      topics: [],
-      writing_style: null,
-      writing_requirements: null,
-      research: null,
-      writer_draft: null,
-      seo_analyze_first_pass: null,
-      internal_links: null,
-      edit_output: null
-    };
-    const conversationHistory: AgentInputItem[] = [
-      { role: "user", content: [{ type: "input_text", text: workflow.input_as_text }] }
-    ];
-    const runner = new Runner({
-      traceMetadata: {
-        __trace_source__: "agent-builder",
-        workflow_id: "wf_692e0fdc02508190b3b51b94f2b7deea0f87a40e1a3b5c93"
-      }
-    });
-    const textToJsonResultTemp = await runner.run(
-      textToJson,
-      [
-        ...conversationHistory
+      "existing_blog_posts_to_avoid": [
+
       ],
-      {
-        context: {
-          workflowInputAsText: workflow.input_as_text
-        }
-      }
-    );
+      "high_performing_pages": [
 
-    if (!textToJsonResultTemp.finalOutput) {
-        throw new Error("Agent result is undefined");
-    }
-
-    const textToJsonResult = {
-      output_text: JSON.stringify(textToJsonResultTemp.finalOutput),
-      output_parsed: textToJsonResultTemp.finalOutput
-    };
-    state.existing_blog_posts_to_avoid = textToJsonResult.output_parsed.existing_blog_posts_to_avoid;
-    state.high_performing_pages = textToJsonResult.output_parsed.high_performing_pages;
-    state.root_blog_url = textToJsonResult.output_parsed.root_blog_url;
-    state.seo_keywords = textToJsonResult.output_parsed.seo_keywords;
-    state.target_product_urls = textToJsonResult.output_parsed.target_product_urls;
-    state.topics = textToJsonResult.output_parsed.topics;
-    state.writing_requirements = textToJsonResult.output_parsed.writing_requirements;
-    const writingStyleResultTemp = await runner.run(
-      writingStyle,
-      [
-        ...conversationHistory
       ],
-      {
-        context: {
-          stateRootBlogUrl: state.root_blog_url,
-          stateHighPerformingPages: state.high_performing_pages
-        }
-      }
-    );
+      "root_blog_url": None,
+      "seo_keywords": [
 
-    if (!writingStyleResultTemp.finalOutput) {
-        throw new Error("Agent result is undefined");
+      ],
+      "target_product_urls": [
+
+      ],
+      "topics": [
+
+      ],
+      "writing_style": None,
+      "writing_requirements": None,
+      "research": None,
+      "writer_draft": None,
+      "seo_analyze_first_pass": None,
+      "internal_links": None,
+      "edit_output": None
     }
-
-    const writingStyleResult = {
-      output_text: JSON.stringify(writingStyleResultTemp.finalOutput),
-      output_parsed: writingStyleResultTemp.finalOutput
-    };
-    state.writing_style = writingStyleResult.output_parsed.writing_style_output;
-    const researchResultTemp = await runner.run(
+    workflow = workflow_input.model_dump()
+    conversation_history: list[TResponseInputItem] = [
+      {
+        "role": "user",
+        "content": [
+          {
+            "type": "input_text",
+            "text": workflow["input_as_text"]
+          }
+        ]
+      }
+    ]
+    text_to_json_result_temp = await Runner.run(
+      text_to_json,
+      input=[
+        *conversation_history
+      ],
+      run_config=RunConfig(trace_metadata={
+        "__trace_source__": "agent-builder",
+        "workflow_id": "wf_692e0fdc02508190b3b51b94f2b7deea0f87a40e1a3b5c93"
+      }),
+      context=TextToJsonContext(workflow_input_as_text=workflow["input_as_text"])
+    )
+    text_to_json_result = {
+      "output_text": text_to_json_result_temp.final_output.json(),
+      "output_parsed": text_to_json_result_temp.final_output.model_dump()
+    }
+    state["existing_blog_posts_to_avoid"] = text_to_json_result["output_parsed"]["existing_blog_posts_to_avoid"]
+    state["high_performing_pages"] = text_to_json_result["output_parsed"]["high_performing_pages"]
+    state["root_blog_url"] = text_to_json_result["output_parsed"]["root_blog_url"]
+    state["seo_keywords"] = text_to_json_result["output_parsed"]["seo_keywords"]
+    state["target_product_urls"] = text_to_json_result["output_parsed"]["target_product_urls"]
+    state["topics"] = text_to_json_result["output_parsed"]["topics"]
+    state["writing_requirements"] = text_to_json_result["output_parsed"]["writing_requirements"]
+    writing_style_result_temp = await Runner.run(
+      writing_style,
+      input=[
+        *conversation_history
+      ],
+      run_config=RunConfig(trace_metadata={
+        "__trace_source__": "agent-builder",
+        "workflow_id": "wf_692e0fdc02508190b3b51b94f2b7deea0f87a40e1a3b5c93"
+      }),
+      context=WritingStyleContext(state_root_blog_url=state["root_blog_url"], state_high_performing_pages=state["high_performing_pages"])
+    )
+    writing_style_result = {
+      "output_text": writing_style_result_temp.final_output.json(),
+      "output_parsed": writing_style_result_temp.final_output.model_dump()
+    }
+    state["writing_style"] = writing_style_result["output_parsed"]["writing_style_output"]
+    research_result_temp = await Runner.run(
       research,
-      [
-        ...conversationHistory
+      input=[
+        *conversation_history
       ],
-      {
-        context: {
-          stateTopics: state.topics,
-          stateWritingRequirements: state.writing_requirements,
-          stateTargetProductUrls: state.target_product_urls
-        }
-      }
-    );
-
-    if (!researchResultTemp.finalOutput) {
-        throw new Error("Agent result is undefined");
+      run_config=RunConfig(trace_metadata={
+        "__trace_source__": "agent-builder",
+        "workflow_id": "wf_692e0fdc02508190b3b51b94f2b7deea0f87a40e1a3b5c93"
+      }),
+      context=ResearchContext(state_topics=state["topics"], state_writing_requirements=state["writing_requirements"], state_target_product_urls=state["target_product_urls"])
+    )
+    research_result = {
+      "output_text": research_result_temp.final_output.json(),
+      "output_parsed": research_result_temp.final_output.model_dump()
     }
-
-    const researchResult = {
-      output_text: JSON.stringify(researchResultTemp.finalOutput),
-      output_parsed: researchResultTemp.finalOutput
-    };
-    state.research = researchResult.output_parsed.research_output;
-    const writerResultTemp = await runner.run(
+    state["research"] = research_result["output_parsed"]["research_output"]
+    writer_result_temp = await Runner.run(
       writer,
-      [
-        ...conversationHistory
+      input=[
+        *conversation_history
       ],
-      {
-        context: {
-          stateTopics: state.topics,
-          stateWritingStyle: state.writing_style,
-          stateResearch: state.research,
-          stateWritingRequirements: state.writing_requirements,
-          stateRootBlogUrl: state.root_blog_url
-        }
-      }
-    );
-
-    if (!writerResultTemp.finalOutput) {
-        throw new Error("Agent result is undefined");
+      run_config=RunConfig(trace_metadata={
+        "__trace_source__": "agent-builder",
+        "workflow_id": "wf_692e0fdc02508190b3b51b94f2b7deea0f87a40e1a3b5c93"
+      }),
+      context=WriterContext(state_topics=state["topics"], state_writing_style=state["writing_style"], state_research=state["research"], state_writing_requirements=state["writing_requirements"], state_root_blog_url=state["root_blog_url"])
+    )
+    writer_result = {
+      "output_text": writer_result_temp.final_output.json(),
+      "output_parsed": writer_result_temp.final_output.model_dump()
     }
-
-    const writerResult = {
-      output_text: JSON.stringify(writerResultTemp.finalOutput),
-      output_parsed: writerResultTemp.finalOutput
-    };
-    state.writer_draft = writerResult.output_parsed.writer_output;
-    const seoAnalyzerResultTemp = await runner.run(
-      seoAnalyzer,
-      [
-        ...conversationHistory
+    state["writer_draft"] = writer_result["output_parsed"]["writer_output"]
+    seo_analyzer_result_temp = await Runner.run(
+      seo_analyzer,
+      input=[
+        *conversation_history
       ],
-      {
-        context: {
-          stateWriterDraft: state.writer_draft,
-          stateTopics: state.topics,
-          stateRootBlogUrl: state.root_blog_url
-        }
-      }
-    );
-
-    if (!seoAnalyzerResultTemp.finalOutput) {
-        throw new Error("Agent result is undefined");
+      run_config=RunConfig(trace_metadata={
+        "__trace_source__": "agent-builder",
+        "workflow_id": "wf_692e0fdc02508190b3b51b94f2b7deea0f87a40e1a3b5c93"
+      }),
+      context=SeoAnalyzerContext(state_writer_draft=state["writer_draft"], state_topics=state["topics"], state_root_blog_url=state["root_blog_url"])
+    )
+    seo_analyzer_result = {
+      "output_text": seo_analyzer_result_temp.final_output.json(),
+      "output_parsed": seo_analyzer_result_temp.final_output.model_dump()
     }
-
-    const seoAnalyzerResult = {
-      output_text: JSON.stringify(seoAnalyzerResultTemp.finalOutput),
-      output_parsed: seoAnalyzerResultTemp.finalOutput
-    };
-    state.seo_analyze_first_pass = seoAnalyzerResult.output_parsed.seo_analzyer_first_pass_output;
-    const internalLinksResultTemp = await runner.run(
-      internalLinks,
-      [
-        ...conversationHistory
+    state["seo_analyze_first_pass"] = seo_analyzer_result["output_parsed"]["seo_analzyer_first_pass_output"]
+    internal_links_result_temp = await Runner.run(
+      internal_links,
+      input=[
+        *conversation_history
       ],
-      {
-        context: {
-          stateWriterDraft: state.writer_draft,
-          stateResponseSchemaRootBlogUrl: state.response_schema.root_blog_url,
-          stateSeoAnalyzeFirstPass: state.seo_analyze_first_pass,
-          stateResponseSchemaTopic: state.response_schema.topic
-        }
-      }
-    );
-
-    if (!internalLinksResultTemp.finalOutput) {
-        throw new Error("Agent result is undefined");
+      run_config=RunConfig(trace_metadata={
+        "__trace_source__": "agent-builder",
+        "workflow_id": "wf_692e0fdc02508190b3b51b94f2b7deea0f87a40e1a3b5c93"
+      }),
+      context=InternalLinksContext(state_writer_draft=state["writer_draft"], state_response_schema_root_blog_url=state["response_schema"]["root_blog_url"], state_seo_analyze_first_pass=state["seo_analyze_first_pass"], state_response_schema_topic=state["response_schema"]["topic"])
+    )
+    internal_links_result = {
+      "output_text": internal_links_result_temp.final_output.json(),
+      "output_parsed": internal_links_result_temp.final_output.model_dump()
     }
-
-    const internalLinksResult = {
-      output_text: JSON.stringify(internalLinksResultTemp.finalOutput),
-      output_parsed: internalLinksResultTemp.finalOutput
-    };
-    state.internal_links = internalLinksResult.output_parsed.internal_links_output;
-    const editorResultTemp = await runner.run(
+    state["internal_links"] = internal_links_result["output_parsed"]["internal_links_output"]
+    editor_result_temp = await Runner.run(
       editor,
-      [
-        ...conversationHistory
+      input=[
+        *conversation_history
       ],
-      {
-        context: {
-          stateRootBlogUrl: state.root_blog_url,
-          stateWritingStyle: state.writing_style,
-          inputOutputParsedInternalLinksOutput: internalLinksResult.output_parsed.internal_links_output,
-          stateSeoAnalyzeFirstPass: state.seo_analyze_first_pass
-        }
-      }
-    );
-
-    if (!editorResultTemp.finalOutput) {
-        throw new Error("Agent result is undefined");
+      run_config=RunConfig(trace_metadata={
+        "__trace_source__": "agent-builder",
+        "workflow_id": "wf_692e0fdc02508190b3b51b94f2b7deea0f87a40e1a3b5c93"
+      }),
+      context=EditorContext(state_root_blog_url=state["root_blog_url"], state_writing_style=state["writing_style"], input_output_parsed_internal_links_output=internal_links_result["output_parsed"]["internal_links_output"], state_seo_analyze_first_pass=state["seo_analyze_first_pass"])
+    )
+    editor_result = {
+      "output_text": editor_result_temp.final_output_as(str)
     }
-
-    const editorResult = {
-      output_text: editorResultTemp.finalOutput ?? ""
-    };
-  });
-}
+    return editor_result

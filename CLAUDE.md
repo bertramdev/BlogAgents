@@ -52,6 +52,21 @@ streamlit run app_v2_json.py
 # - Markdown download of generated content
 ```
 
+### Topic Idea Generator App (Streamlit)
+```bash
+# Run the standalone topic idea generator
+streamlit run app_v2.py
+
+# Opens browser at http://localhost:8501
+# Features:
+# - Generate blog topic ideas using TopicIdeaAgent
+# - Reference blog URL analysis
+# - Target keywords for SEO optimization
+# - Product/service promotion context
+# - Existing topics avoidance
+# - Export to JSON or Markdown
+```
+
 ### Command Line
 ```bash
 # Run the main blog orchestrator directly
@@ -113,6 +128,16 @@ Each step produces intermediate results stored in a results dictionary, allowing
 - Google Ads API integration for search volume and competition metrics
 - Enriches topic ideas with SEO data (search volume, competition, trend status)
 - Provides trend-based estimates when Google Ads API is not configured
+
+### Custom Agents Module (`custom_agents/`)
+
+**TopicIdeaAgent Class**: Standalone agent for generating blog topic ideas
+- Analyzes reference blog style and content using WebSearchTool
+- Incorporates target keywords for SEO optimization
+- Avoids duplicate topics from existing content
+- Supports product/service promotion context
+- Uses async `Runner.run()` with proper conversation input format
+- Parses structured topic output with title, angle, keywords, rationale, and content type
 
 ## Environment Variables Required
 

@@ -73,3 +73,4 @@ credentials.json
 .next/
 out/
 node_modules/
+/.streamlit
