@@ -61,7 +61,7 @@ Blog Agents is a sophisticated content generation system that uses multiple AI a
 
 1. **Clone the repository**
    ```bash
-   git clone https://github.com/tomleelong/BlogAgents.git
+   git clone https://github.com/bertramdev/BlogAgents
    cd BlogAgents
    ```
 
