@@ -9,7 +9,7 @@ from agents import Agent, Runner, WebSearchTool
 load_dotenv()
 
 class BlogAgentOrchestrator:
-    def __init__(self, model="gpt-5"):
+    def __init__(self, model="gpt-5.2"):
         # Store the model for all agents
         self.model = model
         

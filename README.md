@@ -100,19 +100,14 @@ python blog_orchestrator.py
 
 All models support WebSearchTool for style analysis and research:
 
-### GPT-5 Series (Recommended)
-- **gpt-5**: Main reasoning model with advanced capabilities
+### GPT-5.2 Series (Recommended)
+- **gpt-5.2**: Latest flagship model with best overall performance
+- **gpt-5.2-pro**: Extended reasoning for complex content generation
+
+### GPT-5 Series
+- **gpt-5**: Reasoning model with advanced capabilities
 - **gpt-5-mini**: Efficient version with balanced performance
-- **gpt-5-nano**: Fastest version for quick generation
-
-### GPT-4 Series
-- **gpt-4o**: Flagship multimodal model
-- **gpt-4o-mini**: Cost-effective with good performance
-- **chatgpt-4o-latest**: Latest updates and improvements
-
-### GPT-4.1 Series
-- **gpt-4.1**: Latest flagship coding-optimized model
-- **gpt-4.1-mini**: Cost-effective GPT-4.1 variant
+- **gpt-5-nano**: Smallest and fastest version for quick generation
 
 ## Workflow
 
