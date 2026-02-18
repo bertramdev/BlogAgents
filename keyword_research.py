@@ -35,8 +35,11 @@ class KeywordResearcher:
         self.google_ads_config = google_ads_config
         self.google_ads_client = None
 
-        # Initialize Google Trends (always available)
-        self.pytrends = TrendReq(hl='en-US', tz=360)
+        # Initialize Google Trends (requires network access)
+        try:
+            self.pytrends = TrendReq(hl='en-US', tz=360)
+        except Exception:
+            self.pytrends = None
 
         # Initialize Google Ads client if config provided
         if google_ads_config:
@@ -146,6 +149,9 @@ class KeywordResearcher:
         Returns:
             Dict mapping keyword to trend score (0-100)
         """
+        if not self.pytrends:
+            return {kw: 0 for kw in keywords}
+
         try:
             # Google Trends allows max 5 keywords at once
             keywords_chunk = keywords[:5]
@@ -194,6 +200,9 @@ class KeywordResearcher:
         Returns:
             List of related query strings
         """
+        if not self.pytrends:
+            return []
+
         try:
             # Add delay before request to avoid rate limiting
             time.sleep(2)
@@ -283,10 +292,10 @@ class KeywordResearcher:
             return "📉 Low"
 
 
-def create_keyword_researcher(google_ads_config: Optional[Dict] = None) -> KeywordResearcher:
+def create_keyword_researcher(google_ads_config: Optional[Dict] = None) -> Optional[KeywordResearcher]:
     """Factory function to create KeywordResearcher with error handling"""
     try:
         return KeywordResearcher(google_ads_config)
     except Exception as e:
         st.error(f"Failed to create keyword researcher: {str(e)}")
-        return KeywordResearcher()  # Return without Google Ads config
+        return None

@@ -176,6 +176,11 @@ class BlogAgentOrchestrator:
                 2. Numbered item two
                 3. Numbered item three
 
+                PUNCTUATION RULES:
+                - NEVER use em dashes (—) anywhere in your writing
+                - Instead of em dashes, use commas, semicolons, colons, parentheses, or separate sentences
+                - Use spaced hyphens ( - ) only when a dash is truly needed for readability
+
                 Your tasks:
                 - Create engaging, well-structured blog posts using PROPER markdown formatting
                 - Use provided research effectively
@@ -245,6 +250,7 @@ class BlogAgentOrchestrator:
                    - Suggest structural improvements
                    - Consider SEO and AI visibility
                    - Preserve any internal links that have been added
+                   - Replace any em dashes (—) with commas, semicolons, colons, parentheses, or spaced hyphens ( - )
 
                 EXAMPLE OF PROPER MARKDOWN STRUCTURE TO MAINTAIN:
                 # Main Title
@@ -347,6 +353,15 @@ class BlogAgentOrchestrator:
         if hasattr(self, '_thread_pool'):
             self._thread_pool.shutdown(wait=True)
 
+    def _clean_ai_artifacts(self, text: str) -> str:
+        """Replace common AI writing artifacts like em dashes with natural alternatives."""
+        import re
+        # Replace em dash (—) with spaced hyphen
+        text = text.replace("—", " - ")
+        # Clean up any resulting double spaces
+        text = re.sub(r"  +", " ", text)
+        return text
+
     def create_blog_post(self, topic: str, reference_blog: str, requirements: str = "", status_callback=None, cached_style_guide: str = None, product_target: str = None, specific_pages: List[str] = None) -> Dict[str, str]:
         """Main workflow: orchestrates all 7 agents to create style-matched blog post."""
         results = {}
@@ -417,7 +432,7 @@ class BlogAgentOrchestrator:
             """
             
             writing_result = self._run_agent_safely(self.agents["writer"], writing_prompt, timeout_seconds=600)
-            results["draft"] = writing_result.final_output
+            results["draft"] = self._clean_ai_artifacts(writing_result.final_output)
             
             # Step 5: SEO Analysis of draft for optimization recommendations  
             if status_callback:
@@ -482,7 +497,7 @@ class BlogAgentOrchestrator:
             """
             
             linking_result = self._run_agent_safely(self.agents["internal_linker"], linking_prompt, timeout_seconds=600)
-            results["with_links"] = linking_result.final_output
+            results["with_links"] = self._clean_ai_artifacts(linking_result.final_output)
             
             # Step 7: Edit with SEO optimization while preserving style and links
             if status_callback:
@@ -511,7 +526,7 @@ class BlogAgentOrchestrator:
             """
             
             editing_result = self._run_agent_safely(self.agents["editor"], editing_prompt, timeout_seconds=600)
-            results["final"] = editing_result.final_output
+            results["final"] = self._clean_ai_artifacts(editing_result.final_output)
             
             # Step 8: Final SEO Analysis and Performance Assessment
             if status_callback:
